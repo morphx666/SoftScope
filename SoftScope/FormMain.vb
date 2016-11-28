@@ -34,8 +34,8 @@ Public Class FormMain
     'Private filterL As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
     'Private filterR As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
 
-    Private beamColor As Color = Color.FromArgb(255, 90, 255, 90)
-    'Private beamColor As Color = Color.FromArgb(255, 90, 90, 255)
+    Private rayColor As Color = Color.FromArgb(255, 90, 255, 90)
+    'Private rayColor As Color = Color.FromArgb(255, 90, 90, 255)
 
     Private bufL(sampleRate * channels / 2 * bufferMilliseconds / 1000 - 1) As Integer
     Private bufR(sampleRate * channels / 2 * bufferMilliseconds / 1000 - 1) As Integer
@@ -49,14 +49,19 @@ Public Class FormMain
     Private fftRHist(fftHistSize - 1)() As Double
     Private fftWindowSum As Double = FFT.GetWindowSum(fftSize, FFTWindowConstants.Hanning)
 
-    Private renderAudioWaveForm As Boolean = True
-    Private renderAudioFFT As Boolean = True
+    Private leftChannelColor As Color = Color.DarkSlateBlue
+    Private rightChannelColor As Color = Color.OrangeRed
+
+    Private renderAudioWaveForm As Boolean = False
+    Private renderAudioFFT As Boolean = False
 
     Private lastPoints As New List(Of Point)
 
     Private abortThreads As Boolean
 
     Private Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        abortThreads = True
+
         audioSource.StopRecording()
         audioSource.Dispose()
     End Sub
@@ -65,6 +70,8 @@ Public Class FormMain
         Me.SetStyle(ControlStyles.AllPaintingInWmPaint, True)
         Me.SetStyle(ControlStyles.UserPaint, True)
         Me.SetStyle(ControlStyles.OptimizedDoubleBuffer, True)
+
+        SetupEventHandlers()
 
         audioSource = New WaveIn()
         audioSource.WaveFormat = New WaveFormat(sampleRate, bitDepth, channels)
@@ -95,6 +102,50 @@ Public Class FormMain
                                    End Sub)
         renderer.IsBackground = True
         renderer.Start()
+    End Sub
+
+    Private Sub SetupEventHandlers()
+        AddHandler PanelOptions.MouseLeave, Sub() PanelOptions.Visible = False
+        AddHandler Me.MouseMove, Sub(s As Object, e1 As MouseEventArgs)
+                                     If e1.X <= PanelOptions.Right Then
+                                         PanelOptions.Visible = True
+                                     End If
+                                 End Sub
+
+        AddHandler CheckBoxFlipX.CheckedChanged, Sub() flipX = CheckBoxFlipX.Checked
+        AddHandler CheckBoxFlipY.CheckedChanged, Sub() flipY = CheckBoxFlipY.Checked
+        AddHandler CheckBoxFlipXY.CheckedChanged, Sub() flipXY = CheckBoxFlipXY.Checked
+
+        AddHandler CheckBoxWaveForm.CheckedChanged, Sub() renderAudioWaveForm = CheckBoxWaveForm.Checked
+        AddHandler CheckBoxFFT.CheckedChanged, Sub() renderAudioFFT = CheckBoxFFT.Checked
+
+        Dim ChangeColor = Sub(p As Panel)
+                              Using cDlg As New ColorDialog()
+                                  cDlg.Color = p.BackColor
+                                  cDlg.FullOpen = True
+                                  If cDlg.ShowDialog(Me) = DialogResult.OK Then p.BackColor = cDlg.Color
+                              End Using
+                          End Sub
+
+        AddHandler PanelBackColor.Click, Sub()
+                                             ChangeColor(PanelBackColor)
+                                             Me.BackColor = PanelBackColor.BackColor
+                                         End Sub
+
+        AddHandler PanelRayColor.Click, Sub()
+                                            ChangeColor(PanelRayColor)
+                                            rayColor = PanelRayColor.BackColor
+                                        End Sub
+
+        AddHandler PanelLeftChannel.Click, Sub()
+                                               ChangeColor(PanelLeftChannel)
+                                               leftChannelColor = PanelLeftChannel.BackColor
+                                           End Sub
+
+        AddHandler PanelRightChannel.Click, Sub()
+                                                ChangeColor(PanelRightChannel)
+                                                rightChannelColor = PanelRightChannel.BackColor
+                                            End Sub
     End Sub
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
@@ -307,7 +358,7 @@ Public Class FormMain
         For i As Integer = 0 To lastPoints.Count - 1 Step 2
             pA1 = lastPoints(i)
             pB2 = lastPoints(i + 1)
-            Using p As New Pen(Color.FromArgb(Math.Max(0, 96 - Distance(pA1, pB2) * distanceFactor), beamColor), 6)
+            Using p As New Pen(Color.FromArgb(Math.Max(0, 96 - Distance(pA1, pB2) * distanceFactor), rayColor), 6)
                 g.DrawLine(p, pA1, pB2)
             End Using
         Next
@@ -318,7 +369,7 @@ Public Class FormMain
             pA2 = pixelsCopy(i + 1)
 
             If i = 0 Then
-                Using b As New SolidBrush(beamColor)
+                Using b As New SolidBrush(rayColor)
                     g.FillEllipse(b, New Rectangle(pA1, New Size(2, 2)))
                 End Using
             End If
@@ -336,10 +387,10 @@ Public Class FormMain
                 B12 = Math.Atan2(pB1.Y - pB2.Y, pB1.X - pB2.X) * ToDeg
                 If A12 <> B12 Then
                     a = Distance(pA1, pB2) * distanceFactor
-                    Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - a), beamColor), 3)
+                    Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - a), rayColor), 3)
                         g.DrawLine(p, pA1, pB2)
                     End Using
-                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - a), beamColor), 1)
+                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - a), rayColor), 1)
                         g.DrawLine(p, pA1, pB2)
                     End Using
 
@@ -352,8 +403,8 @@ Public Class FormMain
             Next
         Next
 
-        Using colorLeft As New Pen(Color.FromArgb(255, Color.SlateBlue), 1)
-            Using colorRight As New Pen(Color.FromArgb(255, Color.OrangeRed), 1)
+        Using colorLeft As New Pen(leftChannelColor, 1)
+            Using colorRight As New Pen(rightChannelColor, 1)
                 If renderAudioWaveForm Then RenderWaveForm(g, colorLeft, colorRight)
                 If renderAudioFFT Then RenderFFT(g, colorLeft, colorRight)
             End Using
