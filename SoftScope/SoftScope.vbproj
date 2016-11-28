@@ -90,6 +90,7 @@
     <Import Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FFT.vb" />
     <Compile Include="FilterButterworth.vb" />
     <Compile Include="FormMain.vb">
       <SubType>Form</SubType>

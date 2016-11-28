@@ -28,6 +28,7 @@ Public Class FormMain
     Private Const bufferMilliseconds As Integer = 25
     'Private Const bitrate As Integer = (sampleRate * bitDepth * channels * bufferMilliseconds / 1000) / 8
     Private Const stp As Integer = channels * dataSize
+    Private Const maxNormValue As Integer = 2 ^ bitDepth
     Private tmpB(dataSize + (dataSize Mod 2) - 1) As Byte
 
     'Private filterL As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
@@ -35,6 +36,21 @@ Public Class FormMain
 
     Private beamColor As Color = Color.FromArgb(255, 90, 255, 90)
     'Private beamColor As Color = Color.FromArgb(255, 90, 90, 255)
+
+    Private bufL(sampleRate * channels / 2 * bufferMilliseconds / 1000 - 1) As Integer
+    Private bufR(sampleRate * channels / 2 * bufferMilliseconds / 1000 - 1) As Integer
+
+    Private fftSize As FFTSizeConstants = FFTSizeConstants.FFTs2048
+    Private fftSize2 As Integer = fftSize / 2
+    Private fftL(fftSize - 1) As ComplexDouble
+    Private fftR(fftSize - 1) As ComplexDouble
+    Private fftHistSize As Integer = 4
+    Private fftLHist(fftHistSize - 1)() As Double
+    Private fftRHist(fftHistSize - 1)() As Double
+    Private fftWindowSum As Double = FFT.GetWindowSum(fftSize, FFTWindowConstants.Hanning)
+
+    Private renderAudioWaveForm As Boolean = True
+    Private renderAudioFFT As Boolean = True
 
     Private lastPoints As New List(Of Point)
 
@@ -66,6 +82,11 @@ Public Class FormMain
         'flipX = True
         'flipY = True
 
+        For i As Integer = 0 To fftHistSize - 1
+            ReDim fftLHist(i)(fftSize2 - 1)
+            ReDim fftRHist(i)(fftSize2 - 1)
+        Next
+
         Dim renderer As New Thread(Sub()
                                        Do
                                            Thread.Sleep(1000 / 60)
@@ -81,29 +102,26 @@ Public Class FormMain
         Dim y As Integer
         Dim tmp As Integer
 
-        Dim normL As Long
-        Dim normR As Long
-
         SyncLock pixels
             pixels.Clear()
 
             For i As Integer = 0 To e.Buffer.Length - 1 Step stp
                 Select Case bitDepth
                     Case 8
-                        normL = (128 - e.Buffer(i))
-                        normR = (128 - e.Buffer(i + dataSize))
+                        bufL(i / stp) = (128 - e.Buffer(i))
+                        bufR(i / stp) = (128 - e.Buffer(i + dataSize))
                     Case 16
                         Array.Copy(e.Buffer, i, tmpB, 0, dataSize)
-                        normL = BitConverter.ToInt16(tmpB, 0)
+                        bufL(i / stp) = BitConverter.ToInt16(tmpB, 0)
 
                         Array.Copy(e.Buffer, i + dataSize, tmpB, 0, dataSize)
-                        normR = BitConverter.ToInt16(tmpB, 0)
+                        bufR(i / stp) = BitConverter.ToInt16(tmpB, 0)
                     Case 24
                         Array.Copy(e.Buffer, i, tmpB, 1, dataSize)
-                        normL = BitConverter.ToInt32(tmpB, 0)
+                        bufL(i / stp) = BitConverter.ToInt32(tmpB, 0)
 
                         Array.Copy(e.Buffer, i + dataSize, tmpB, 1, dataSize)
-                        normR = BitConverter.ToInt32(tmpB, 0)
+                        bufR(i / stp) = BitConverter.ToInt32(tmpB, 0)
                 End Select
 
                 'filterL.Update(normL)
@@ -112,8 +130,8 @@ Public Class FormMain
                 'filterR.Update(normR)
                 'normR = filterR.Value
 
-                x = normL * widthFactor
-                y = -normR * heightFactor
+                x = bufL(i / stp) * widthFactor
+                y = -bufR(i / stp) * heightFactor
 
                 If flipX Then x = -x
                 If flipY Then y = -y
@@ -265,8 +283,10 @@ Public Class FormMain
         ' Do nothing...
     End Sub
 
-    Private Sub FormMain_Paint(sender As Object, e As PaintEventArgs) Handles Me.Paint
-        e.Graphics.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        Dim g As Graphics = e.Graphics
+
+        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
 
         Dim pixelsCopy As List(Of Point)
         SyncLock pixels
@@ -288,7 +308,7 @@ Public Class FormMain
             pA1 = lastPoints(i)
             pB2 = lastPoints(i + 1)
             Using p As New Pen(Color.FromArgb(Math.Max(0, 96 - Distance(pA1, pB2) * distanceFactor), beamColor), 6)
-                e.Graphics.DrawLine(p, pA1, pB2)
+                g.DrawLine(p, pA1, pB2)
             End Using
         Next
         lastPoints.Clear()
@@ -299,7 +319,7 @@ Public Class FormMain
 
             If i = 0 Then
                 Using b As New SolidBrush(beamColor)
-                    e.Graphics.FillEllipse(b, New Rectangle(pA1, New Size(2, 2)))
+                    g.FillEllipse(b, New Rectangle(pA1, New Size(2, 2)))
                 End Using
             End If
 
@@ -317,10 +337,10 @@ Public Class FormMain
                 If A12 <> B12 Then
                     a = Distance(pA1, pB2) * distanceFactor
                     Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - a), beamColor), 3)
-                        e.Graphics.DrawLine(p, pA1, pB2)
+                        g.DrawLine(p, pA1, pB2)
                     End Using
                     Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - a), beamColor), 1)
-                        e.Graphics.DrawLine(p, pA1, pB2)
+                        g.DrawLine(p, pA1, pB2)
                     End Using
 
                     lastPoints.Add(pA1)
@@ -331,7 +351,145 @@ Public Class FormMain
                 End If
             Next
         Next
+
+        Using colorLeft As New Pen(Color.FromArgb(255, Color.SlateBlue), 1)
+            Using colorRight As New Pen(Color.FromArgb(255, Color.OrangeRed), 1)
+                If renderAudioWaveForm Then RenderWaveForm(g, colorLeft, colorRight)
+                If renderAudioFFT Then RenderFFT(g, colorLeft, colorRight)
+            End Using
+        End Using
     End Sub
+
+    Private Sub RenderFFT(g As Graphics, colorLeft As Pen, colorRight As Pen)
+        Dim bufDblL(bufL.Length - 1) As Double
+        Dim bufDblR(bufR.Length - 1) As Double
+
+        For i As Integer = 0 To bufL.Length - 1
+            bufDblL(i) = bufL(i) * FFT.ApplyWindow(i, fftSize, FFTWindowConstants.Hanning)
+            bufDblR(i) = bufR(i) * FFT.ApplyWindow(i, fftSize, FFTWindowConstants.Hanning)
+        Next
+
+        FFT.FourierTransform(fftSize, bufDblL, fftL, bufDblR, fftR, False)
+
+        For i As Integer = 0 To fftHistSize - 2
+            For j As Integer = 0 To fftSize2 - 1
+                fftLHist(i)(j) = fftLHist(i + 1)(j)
+                fftRHist(i)(j) = fftRHist(i + 1)(j)
+            Next
+        Next
+
+        For i As Integer = 0 To fftSize2 - 1
+            fftLHist(fftHistSize - 1)(i) = fftL(i).Power()
+            fftRHist(fftHistSize - 1)(i) = fftR(i).Power()
+        Next
+
+        Dim r As New Rectangle(0, 0, screenWidthHalf / 2, screenHeightHalf / 2)
+        r.X = Me.DisplayRectangle.Width - r.Width - 8
+        r.Y = Me.DisplayRectangle.Height - r.Height - 8
+
+        If renderAudioWaveForm Then r.Y -= r.Height + 8
+
+        Dim s As Size
+        Dim penOffset As Integer = colorLeft.Width / 2
+        Dim lastPL As Point = New Point(r.X + penOffset, r.Bottom)
+        Dim lastPR As Point = lastPL
+        Dim newDivX As Integer
+
+        Using p As New Pen(Color.FromArgb(128, Color.DarkSlateGray))
+            For x As Integer = 0 To fftSize2 - 1 Step 100
+                For x1 As Integer = 0 To 10
+                    newDivX = r.X + x + Math.Min(Math.Log10(x1 + 1) / Math.Log10(fftSize2 - 1) * r.Width, r.Width) + s.Width
+                    g.DrawLine(p, newDivX, r.Y, newDivX, r.Bottom)
+                Next
+            Next
+        End Using
+
+        Dim lastW As Integer = FFT2Pts(fftSize2 - 1, r, 1, fftSize).Width + colorLeft.Width
+        For x As Integer = 0 To fftSize2 - 1
+            s = FFT2Pts(x, r, 1, fftSize)
+            newDivX = r.X + x / fftSize2 * (r.Width - lastW) + s.Width + penOffset
+            g.DrawLine(colorLeft, lastPL.X, lastPL.Y, newDivX, r.Bottom - s.Height - colorLeft.Width)
+            lastPL = New Point(newDivX, r.Bottom - s.Height)
+
+            s = FFT2Pts(x, r, 2, fftSize)
+            g.DrawLine(colorRight, lastPR.X, lastPR.Y, newDivX, r.Bottom - s.Height - colorLeft.Width)
+            lastPR = New Point(newDivX, r.Bottom - s.Height)
+        Next
+
+        g.DrawRectangle(Pens.DimGray, r)
+        Using sb As New SolidBrush(Color.FromArgb(128, 33, 33, 33))
+            g.FillRectangle(sb, r)
+        End Using
+    End Sub
+
+    Private Function FFT2Pts(x As Integer, r As Rectangle, channel As Integer, fftSize As FFTSizeConstants) As Size
+        Dim v As Double
+
+        v = (FFTAvg(x, channel) / fftWindowSum * 2) / 20
+        v = Math.Min(Math.Log10(v + 1) / 10 * r.Height, r.Height)
+        x = Math.Min(Math.Log10(x + 1) / Math.Log10(fftSize2 - 1) * r.Width, r.Width)
+
+        Return New Size(x, v)
+    End Function
+
+    Private Function FFTAvg(x As Integer, channel As Integer) As Double
+        Dim v As Double
+        For i As Integer = 0 To fftHistSize - 1
+            If channel = 1 Then
+                v += fftLHist(i)(x)
+            Else
+                v += fftRHist(i)(x)
+            End If
+        Next
+        Return v / fftHistSize
+    End Function
+
+    Private Sub RenderWaveForm(g As Graphics, colorLeft As Pen, colorRight As Pen)
+        Dim r As New Rectangle(0, 0, screenWidthHalf / 2, screenHeightHalf / 2)
+        r.X = Me.DisplayRectangle.Width - r.Width - 8
+        r.Y = Me.DisplayRectangle.Height - r.Height - 8
+
+        Using sb As New SolidBrush(Color.FromArgb(128, 33, 33, 33))
+            g.FillRectangle(sb, r)
+        End Using
+
+        Dim pts() As Point
+        For x As Integer = colorLeft.Width To bufL.Length - 2
+            pts = Buf2Pts(x, r, 1)
+            g.DrawLine(colorLeft, pts(0), pts(1))
+            pts = Buf2Pts(x, r, 2)
+            g.DrawLine(colorRight, pts(0), pts(1))
+        Next
+
+        g.DrawRectangle(Pens.DimGray, r)
+        Using p As New Pen(Color.FromArgb(128, 66, 66, 66))
+            g.DrawLine(p, r.X, r.Y + r.Height \ 2, r.Right, r.Y + r.Height \ 2)
+        End Using
+    End Sub
+
+    Private Function Buf2Pts(x As Integer, r As Rectangle, channel As Integer) As Point()
+        Dim ps(2 - 1) As Point
+
+        Dim v1 As Integer
+        Dim v2 As Integer
+        Dim hh As Integer = r.Height / 2
+        Dim y As Integer
+
+        If channel = 1 Then ' Left
+            v1 = bufL(x) / maxNormValue * hh
+            v2 = bufL(x + 1) / maxNormValue * hh
+            y = r.Y + hh / 2
+        Else                ' Right
+            v1 = bufR(x) / maxNormValue * hh
+            v2 = bufR(x + 1) / maxNormValue * hh
+            y = r.Bottom - hh / 2
+        End If
+
+        ps(0) = New Point(r.X + x / bufL.Length * r.Width, v1 + y)
+        ps(1) = New Point(r.X + (x + 1) / bufL.Length * r.Width, v2 + y)
+
+        Return ps
+    End Function
 
     Public Shared Function Distance(p1 As Point, p2 As Point) As Double
         Dim dx As Double = p1.X - p2.X
