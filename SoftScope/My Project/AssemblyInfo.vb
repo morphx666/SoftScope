@@ -8,11 +8,11 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("OscDEMO")> 
+<Assembly: AssemblyTitle("SoftScope")>
 <Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("xFX JumpStart")> 
-<Assembly: AssemblyProduct("OscDEMO")> 
-<Assembly: AssemblyCopyright("Copyright © xFX JumpStart 2007")> 
+<Assembly: AssemblyCompany("xFX JumpStart")>
+<Assembly: AssemblyProduct("SoftScope")>
+<Assembly: AssemblyCopyright("Copyright © xFX JumpStart 2007 - 2016")>
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>
@@ -31,5 +31,5 @@ Imports System.Runtime.InteropServices
 ' by using the '*' as shown below:
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
-<Assembly: AssemblyVersion("2016.11.28.693")>
-<Assembly: AssemblyFileVersion("2016.11.28.693")>
+<Assembly: AssemblyVersion("2016.11.28.696")>
+<Assembly: AssemblyFileVersion("2016.11.28.696")>

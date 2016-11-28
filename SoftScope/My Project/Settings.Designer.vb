@@ -64,9 +64,9 @@ Namespace My
     Friend Module MySettingsProperty
         
         <Global.System.ComponentModel.Design.HelpKeywordAttribute("My.Settings")>  _
-        Friend ReadOnly Property Settings() As Global.OscDEMO.My.MySettings
+        Friend ReadOnly Property Settings() As Global.SoftScope.My.MySettings
             Get
-                Return Global.OscDEMO.My.MySettings.Default
+                Return Global.SoftScope.My.MySettings.Default
             End Get
         End Property
     End Module

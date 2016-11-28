@@ -7,9 +7,9 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{816BA570-0162-44FD-8CA1-22405A779FA7}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <StartupObject>OscDEMO.My.MyApplication</StartupObject>
-    <RootNamespace>OscDEMO</RootNamespace>
-    <AssemblyName>OscDEMO</AssemblyName>
+    <StartupObject>SoftScope.My.MyApplication</StartupObject>
+    <RootNamespace>SoftScope</RootNamespace>
+    <AssemblyName>SoftScope</AssemblyName>
     <MyType>WindowsForms</MyType>
     <OptionStrict>Off</OptionStrict>
     <FileUpgradeFlags>
@@ -41,7 +41,7 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\</OutputPath>
-    <DocumentationFile>OscDEMO.xml</DocumentationFile>
+    <DocumentationFile>SoftScope.xml</DocumentationFile>
     <NoWarn>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036,42353,42354,42355</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <PlatformTarget>x86</PlatformTarget>
@@ -54,7 +54,7 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\</OutputPath>
-    <DocumentationFile>OscDEMO.xml</DocumentationFile>
+    <DocumentationFile>SoftScope.xml</DocumentationFile>
     <NoWarn>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036,42353,42354,42355</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <PlatformTarget>x86</PlatformTarget>

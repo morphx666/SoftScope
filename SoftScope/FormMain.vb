@@ -297,11 +297,11 @@ Public Class FormMain
             pA1 = pixelsCopy(i)
             pA2 = pixelsCopy(i + 1)
 
-            'If i = 0 Then
-            '    Using b As New SolidBrush(beamColor)
-            '        e.Graphics.FillEllipse(b, New Rectangle(pA1, New Size(2, 2)))
-            '    End Using
-            'End If
+            If i = 0 Then
+                Using b As New SolidBrush(beamColor)
+                    e.Graphics.FillEllipse(b, New Rectangle(pA1, New Size(2, 2)))
+                End Using
+            End If
 
             If pA1 = pA2 Then Continue For
 
