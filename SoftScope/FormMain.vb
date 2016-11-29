@@ -71,6 +71,8 @@ Public Class FormMain
         Me.SetStyle(ControlStyles.UserPaint, True)
         Me.SetStyle(ControlStyles.OptimizedDoubleBuffer, True)
 
+        LabelVersion.Text = My.Application.Info.Version.ToString()
+
         SetupEventHandlers()
 
         audioSource = New WaveIn()
