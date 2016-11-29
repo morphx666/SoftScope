@@ -9,7 +9,7 @@ Imports System.Runtime.InteropServices
 ' Review the values of the assembly attributes
 
 <Assembly: AssemblyTitle("SoftScope")>
-<Assembly: AssemblyDescription("")> 
+<Assembly: AssemblyDescription("A software based Oscilloscope / Vectorscope")>
 <Assembly: AssemblyCompany("xFX JumpStart")>
 <Assembly: AssemblyProduct("SoftScope")>
 <Assembly: AssemblyCopyright("Copyright © xFX JumpStart 2007 - 2016")>
@@ -31,5 +31,5 @@ Imports System.Runtime.InteropServices
 ' by using the '*' as shown below:
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
-<Assembly: AssemblyVersion("2016.11.29.912")>
-<Assembly: AssemblyFileVersion("2016.11.29.912")>
+<Assembly: AssemblyVersion("2016.11.29.970")>
+<Assembly: AssemblyFileVersion("2016.11.29.970")>

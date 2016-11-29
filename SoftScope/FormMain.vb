@@ -15,30 +15,28 @@ Public Class FormMain
 
     Private distanceFactor As Double
 
-    Private flipXY As Boolean = True
-    Private flipX As Boolean = True
-    Private flipY As Boolean = False
+    Private flipXY As Boolean
+    Private flipX As Boolean
+    Private flipY As Boolean
 
     Private pixels As New List(Of Point)
 
-    Private Const sampleRate As Integer = 96000
-    Private Const channels As Integer = 2
-    Private Const bitDepth As Integer = 16
-    Private Const dataSize As Integer = bitDepth \ 8
+    Private sampleRate As Integer
+    Private channels As Integer
+    Private bitDepth As Integer
+    Private dataSize As Integer
     Private Const bufferMilliseconds As Integer = 25
-    'Private Const bitrate As Integer = (sampleRate * bitDepth * channels * bufferMilliseconds / 1000) / 8
-    Private Const stp As Integer = channels * dataSize
-    Private Const maxNormValue As Integer = 2 ^ bitDepth
-    Private tmpB(dataSize + (dataSize Mod 2) - 1) As Byte
+    Private stp As Integer
+    Private maxNormValue As Integer
+    Private tmpB() As Byte
 
     'Private filterL As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
     'Private filterR As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
 
     Private rayColor As Color = Color.FromArgb(255, 90, 255, 90)
-    'Private rayColor As Color = Color.FromArgb(255, 90, 90, 255)
 
-    Private bufL(sampleRate * channels / 2 * bufferMilliseconds / 1000 - 1) As Integer
-    Private bufR(sampleRate * channels / 2 * bufferMilliseconds / 1000 - 1) As Integer
+    Private bufL() As Integer
+    Private bufR() As Integer
 
     Private fftSize As FFTSizeConstants = FFTSizeConstants.FFTs2048
     Private fftSize2 As Integer = fftSize / 2
@@ -62,11 +60,10 @@ Public Class FormMain
     Private Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
         abortThreads = True
 
-        audioSource.StopRecording()
-        audioSource.Dispose()
+        StopAudioDevice()
     End Sub
 
-    Private Sub FormMain_Load(sender As Object, e As System.EventArgs) Handles Me.Load
+    Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles Me.Load
         Me.SetStyle(ControlStyles.AllPaintingInWmPaint, True)
         Me.SetStyle(ControlStyles.UserPaint, True)
         Me.SetStyle(ControlStyles.OptimizedDoubleBuffer, True)
@@ -75,21 +72,10 @@ Public Class FormMain
 
         SetupEventHandlers()
 
-        audioSource = New WaveIn()
-        audioSource.WaveFormat = New WaveFormat(sampleRate, bitDepth, channels)
-        audioSource.BufferMilliseconds = bufferMilliseconds
-        AddHandler audioSource.DataAvailable, AddressOf ProcessAudio
-        audioSource.StartRecording()
-
-        ' http://oscilloscopemusic.com/
-        flipXY = False
-        flipX = False
-        flipY = False
-
-        ' youscope
-        'flipXY = True
-        'flipX = True
-        'flipY = True
+        For i As Integer = 0 To WaveIn.DeviceCount - 1
+            ComboBoxAudioDevices.Items.Add(WaveIn.GetCapabilities(i).ProductName)
+        Next
+        ComboBoxAudioDevices.SelectedIndex = 0
 
         For i As Integer = 0 To fftHistSize - 1
             ReDim fftLHist(i)(fftSize2 - 1)
@@ -98,7 +84,7 @@ Public Class FormMain
 
         Dim renderer As New Thread(Sub()
                                        Do
-                                           Thread.Sleep(1000 / 60)
+                                           Thread.Sleep(1000 / 30)
                                            Me.Invalidate()
                                        Loop Until abortThreads
                                    End Sub)
@@ -106,13 +92,113 @@ Public Class FormMain
         renderer.Start()
     End Sub
 
+    Private Sub SetWindowParams()
+        Dim pixelRatio As Double = Me.DisplayRectangle.Width / Me.DisplayRectangle.Height
+
+        screenWidthHalf = Me.DisplayRectangle.Width / 2
+        widthFactor = (Me.DisplayRectangle.Width / pixelRatio) / (2 ^ bitDepth / 2)
+
+        screenHeightHalf = Me.DisplayRectangle.Height / 2
+        heightFactor = Me.DisplayRectangle.Height / (2 ^ bitDepth / 2)
+
+        Dim diagonal As Double = Math.Sqrt(Me.DisplayRectangle.Width ^ 2 + Me.DisplayRectangle.Height ^ 2)
+        Dim w As Integer = Screen.FromControl(Me).Bounds.Width - Me.DisplayRectangle.Width
+        Dim h As Integer = Screen.FromControl(Me).Bounds.Height - Me.DisplayRectangle.Height
+        Dim m As Integer = Math.Sqrt(Math.Max(w, h))
+        distanceFactor = m / diagonal * 256
+    End Sub
+
+    Private Sub StopAudioDevice()
+        If audioSource IsNot Nothing Then
+            audioSource.StopRecording()
+            audioSource.Dispose()
+        End If
+    End Sub
+
+    Private Sub InitAudioSource()
+        StopAudioDevice()
+
+        audioSource = New WaveIn()
+        audioSource.DeviceNumber = ComboBoxAudioDevices.SelectedIndex
+        Dim wc As WaveInCapabilities = WaveIn.GetCapabilities(audioSource.DeviceNumber)
+        LabelAudioSource.MaximumSize = New Size(PanelOptions.Width - LabelAudioSource.Left - 4, LabelAudioSource.Height)
+        LabelAudioSource.Text = wc.ProductName
+
+        Dim bestFormat As SupportedWaveFormat = SupportedWaveFormat.WAVE_FORMAT_1M08
+        Dim names() As String = [Enum].GetNames(GetType(SupportedWaveFormat))
+        Dim values() As Integer = [Enum].GetValues(GetType(SupportedWaveFormat))
+        For i As Integer = 0 To values.Length - 1
+            If wc.SupportsWaveFormat(values(i)) AndAlso values(i) > bestFormat Then
+                bestFormat = [Enum].Parse(GetType(SupportedWaveFormat), names(i))
+            End If
+        Next
+
+        Dim f As String = bestFormat.ToString().Split("_").Last()
+        Dim v As String = ""
+        Dim token As Integer = 1
+        For i As Integer = 0 To f.Length - 1
+            Select Case token
+                Case 1 ' Sample Rate
+                    If Char.IsDigit(f(i)) Then
+                        v += f(i)
+                    Else
+                        Select Case v
+                            Case "1" : sampleRate = 11025
+                            Case "2" : sampleRate = 22050
+                            Case "4" : sampleRate = 44100
+                            Case "48" : sampleRate = 48000
+                            Case "96" : sampleRate = 96000
+                        End Select
+                        i -= 1
+                        token += 1
+                    End If
+                Case 2 ' Channels
+                    If f(i) = "M" Then
+                        channels = 1
+                    Else
+                        channels = 2
+                    End If
+                    token += 1
+                Case 3
+                    If f(i) = "0" Then
+                        bitDepth = 8
+                    Else
+                        bitDepth = 16
+                    End If
+            End Select
+        Next
+        LabelAudioFormat.Text = $"{sampleRate / 1000:F3} KHz {If(channels = "1", "Mono", "Stereo")} {bitDepth} bits"
+        LabelAudioFormat.ForeColor = If(channels = 1, Color.OrangeRed, Me.ForeColor)
+
+        dataSize = bitDepth / 8
+        stp = channels * dataSize
+        maxNormValue = 2 ^ bitDepth
+
+        ReDim tmpB(dataSize + (dataSize Mod 2) - 1)
+        ReDim bufL(sampleRate * bufferMilliseconds / 1000 - 1)
+        ReDim bufR(sampleRate * bufferMilliseconds / 1000 - 1)
+
+        audioSource.WaveFormat = New WaveFormat(sampleRate, bitDepth, channels)
+        audioSource.BufferMilliseconds = bufferMilliseconds
+        AddHandler audioSource.DataAvailable, AddressOf ProcessAudio
+        audioSource.StartRecording()
+
+        SetWindowParams()
+        ComboBoxAudioDevices.Visible = False
+    End Sub
+
     Private Sub SetupEventHandlers()
+        AddHandler Me.Resize, Sub() SetWindowParams()
         AddHandler PanelOptions.MouseLeave, Sub() PanelOptions.Visible = False
         AddHandler Me.MouseMove, Sub(s As Object, e1 As MouseEventArgs)
                                      If e1.X <= PanelOptions.Right Then
                                          PanelOptions.Visible = True
                                      End If
                                  End Sub
+
+        AddHandler LabelAudioSource.MouseEnter, Sub() ComboBoxAudioDevices.Visible = True
+        AddHandler ComboBoxAudioDevices.MouseLeave, Sub() ComboBoxAudioDevices.Visible = False
+        AddHandler ComboBoxAudioDevices.SelectedIndexChanged, Sub() InitAudioSource()
 
         AddHandler CheckBoxFlipX.CheckedChanged, Sub() flipX = CheckBoxFlipX.Checked
         AddHandler CheckBoxFlipY.CheckedChanged, Sub() flipY = CheckBoxFlipY.Checked
@@ -346,7 +432,7 @@ Public Class FormMain
             pixelsCopy = pixels.ToList()
         End SyncLock
 
-        Dim a As Double
+        Dim angle As Double
         Dim len As Integer = pixelsCopy.Count - 2
 
         Dim pA1 As Point
@@ -388,11 +474,11 @@ Public Class FormMain
 
                 B12 = Math.Atan2(pB1.Y - pB2.Y, pB1.X - pB2.X) * ToDeg
                 If A12 <> B12 Then
-                    a = Distance(pA1, pB2) * distanceFactor
-                    Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - a), rayColor), 3)
+                    angle = Distance(pA1, pB2) * distanceFactor
+                    Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - angle), rayColor), 3)
                         g.DrawLine(p, pA1, pB2)
                     End Using
-                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - a), rayColor), 1)
+                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - angle), rayColor), 1)
                         g.DrawLine(p, pA1, pB2)
                     End Using
 
@@ -549,20 +635,4 @@ Public Class FormMain
         Dim dy As Double = p1.Y - p2.Y
         Return Math.Sqrt(dx * dx + dy * dy)
     End Function
-
-    Private Sub FormMain_Resize(sender As Object, e As EventArgs) Handles Me.Resize
-        Dim pixelRatio As Double = Me.DisplayRectangle.Width / Me.DisplayRectangle.Height
-
-        screenWidthHalf = Me.DisplayRectangle.Width / 2
-        widthFactor = (Me.DisplayRectangle.Width / pixelRatio) / (2 ^ bitDepth / 2)
-
-        screenHeightHalf = Me.DisplayRectangle.Height / 2
-        heightFactor = Me.DisplayRectangle.Height / (2 ^ bitDepth / 2)
-
-        Dim diagonal As Double = Math.Sqrt(Me.DisplayRectangle.Width ^ 2 + Me.DisplayRectangle.Height ^ 2)
-        Dim w As Integer = Screen.FromControl(Me).Bounds.Width - Me.DisplayRectangle.Width
-        Dim h As Integer = Screen.FromControl(Me).Bounds.Height - Me.DisplayRectangle.Height
-        Dim m As Integer = Math.Sqrt(Math.Max(w, h))
-        distanceFactor = m / diagonal * 256
-    End Sub
 End Class
