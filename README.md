@@ -9,4 +9,5 @@ The result, when used with the [appropriate audio source](http://oscilloscopemus
 [Video with audio](https://xfx.net/stackoverflow/SoftScopeVideo/index.html)
 
 ![SoftScope v0.4](https://xfx.net/stackoverflow/SoftScopeVideo/softscope04.png)
+
 Screenshot of SoftCode v0.4 with the new wave form and spectrum panels.
