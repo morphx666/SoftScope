@@ -6,7 +6,7 @@ The result, when used with the [appropriate audio source](http://oscilloscopemus
 
 ![SoftScope v0.3](https://xfx.net/stackoverflow/SoftScopeVideo/SoftScope.gif)
 
-[Video with audio](https://xfx.net/stackoverflow/SoftScopeVideo/index.html)
+[Click here to see this sample as a video with audio](https://xfx.net/stackoverflow/SoftScopeVideo/index.html)
 
 ![SoftScope v0.4](https://xfx.net/stackoverflow/SoftScopeVideo/softscope04.png)
 
