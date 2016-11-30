@@ -24,6 +24,7 @@ Partial Class FormMain
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Me.PanelOptions = New System.Windows.Forms.Panel()
+        Me.ComboBoxAudioDevices = New System.Windows.Forms.ComboBox()
         Me.Panel2 = New System.Windows.Forms.Panel()
         Me.Panel1 = New System.Windows.Forms.Panel()
         Me.LabelVersion = New System.Windows.Forms.Label()
@@ -48,7 +49,6 @@ Partial Class FormMain
         Me.CheckBoxFFT = New System.Windows.Forms.CheckBox()
         Me.CheckBoxWaveForm = New System.Windows.Forms.CheckBox()
         Me.CheckBoxFlipX = New System.Windows.Forms.CheckBox()
-        Me.ComboBoxAudioDevices = New System.Windows.Forms.ComboBox()
         Me.PanelOptions.SuspendLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -89,6 +89,16 @@ Partial Class FormMain
         Me.PanelOptions.TabIndex = 0
         Me.PanelOptions.Visible = False
         '
+        'ComboBoxAudioDevices
+        '
+        Me.ComboBoxAudioDevices.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ComboBoxAudioDevices.FormattingEnabled = True
+        Me.ComboBoxAudioDevices.Location = New System.Drawing.Point(24, 432)
+        Me.ComboBoxAudioDevices.Name = "ComboBoxAudioDevices"
+        Me.ComboBoxAudioDevices.Size = New System.Drawing.Size(139, 23)
+        Me.ComboBoxAudioDevices.TabIndex = 8
+        Me.ComboBoxAudioDevices.Visible = False
+        '
         'Panel2
         '
         Me.Panel2.BackColor = System.Drawing.Color.DimGray
@@ -112,7 +122,7 @@ Partial Class FormMain
         Me.LabelVersion.AutoSize = True
         Me.LabelVersion.Font = New System.Drawing.Font("Segoe UI", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.LabelVersion.ForeColor = System.Drawing.Color.DimGray
-        Me.LabelVersion.Location = New System.Drawing.Point(74, 34)
+        Me.LabelVersion.Location = New System.Drawing.Point(74, 40)
         Me.LabelVersion.Name = "LabelVersion"
         Me.LabelVersion.Size = New System.Drawing.Size(61, 13)
         Me.LabelVersion.TabIndex = 6
@@ -123,7 +133,7 @@ Partial Class FormMain
         Me.Label8.AutoSize = True
         Me.Label8.Font = New System.Drawing.Font("Segoe UI Light", 14.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Label8.ForeColor = System.Drawing.Color.White
-        Me.Label8.Location = New System.Drawing.Point(71, 10)
+        Me.Label8.Location = New System.Drawing.Point(71, 16)
         Me.Label8.Name = "Label8"
         Me.Label8.Size = New System.Drawing.Size(92, 25)
         Me.Label8.TabIndex = 4
@@ -132,7 +142,7 @@ Partial Class FormMain
         'PictureBox1
         '
         Me.PictureBox1.Image = Global.SoftScope.My.Resources.Resources.icon
-        Me.PictureBox1.Location = New System.Drawing.Point(12, 12)
+        Me.PictureBox1.Location = New System.Drawing.Point(6, 12)
         Me.PictureBox1.Name = "PictureBox1"
         Me.PictureBox1.Size = New System.Drawing.Size(60, 50)
         Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
@@ -351,16 +361,6 @@ Partial Class FormMain
         Me.CheckBoxFlipX.UseMnemonic = False
         Me.CheckBoxFlipX.UseVisualStyleBackColor = True
         '
-        'ComboBoxAudioDevices
-        '
-        Me.ComboBoxAudioDevices.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
-        Me.ComboBoxAudioDevices.FormattingEnabled = True
-        Me.ComboBoxAudioDevices.Location = New System.Drawing.Point(24, 432)
-        Me.ComboBoxAudioDevices.Name = "ComboBoxAudioDevices"
-        Me.ComboBoxAudioDevices.Size = New System.Drawing.Size(139, 23)
-        Me.ComboBoxAudioDevices.TabIndex = 8
-        Me.ComboBoxAudioDevices.Visible = False
-        '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(7.0!, 15.0!)
@@ -372,7 +372,7 @@ Partial Class FormMain
         Me.ForeColor = System.Drawing.Color.LightGray
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.Name = "FormMain"
-        Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
+        Me.StartPosition = System.Windows.Forms.FormStartPosition.Manual
         Me.Text = "SoftScope"
         Me.PanelOptions.ResumeLayout(False)
         Me.PanelOptions.PerformLayout()

@@ -1,6 +1,7 @@
 Imports System.Threading
 Imports System.IO
 Imports NAudio.Wave
+Imports System.Xml.Linq
 
 Public Class FormMain
     Private Const ToDeg As Double = 180.0 / Math.PI
@@ -57,7 +58,11 @@ Public Class FormMain
 
     Private abortThreads As Boolean
 
+    Private mainWindowBounds As Rectangle
+
     Private Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+        SaveSettings()
+
         abortThreads = True
 
         StopAudioDevice()
@@ -75,7 +80,6 @@ Public Class FormMain
         For i As Integer = 0 To WaveIn.DeviceCount - 1
             ComboBoxAudioDevices.Items.Add(WaveIn.GetCapabilities(i).ProductName)
         Next
-        ComboBoxAudioDevices.SelectedIndex = 0
 
         For i As Integer = 0 To fftHistSize - 1
             ReDim fftLHist(i)(fftSize2 - 1)
@@ -90,22 +94,26 @@ Public Class FormMain
                                    End Sub)
         renderer.IsBackground = True
         renderer.Start()
+
+        LoadSettings()
     End Sub
 
     Private Sub SetWindowParams()
-        Dim pixelRatio As Double = Me.DisplayRectangle.Width / Me.DisplayRectangle.Height
+        If Me.WindowState <> FormWindowState.Minimized Then
+            Dim pixelRatio As Double = Me.DisplayRectangle.Width / Me.DisplayRectangle.Height
 
-        screenWidthHalf = Me.DisplayRectangle.Width / 2
-        widthFactor = (Me.DisplayRectangle.Width / pixelRatio) / (2 ^ bitDepth / 2)
+            screenWidthHalf = Me.DisplayRectangle.Width / 2
+            widthFactor = (Me.DisplayRectangle.Width / pixelRatio) / (2 ^ bitDepth / 2)
 
-        screenHeightHalf = Me.DisplayRectangle.Height / 2
-        heightFactor = Me.DisplayRectangle.Height / (2 ^ bitDepth / 2)
+            screenHeightHalf = Me.DisplayRectangle.Height / 2
+            heightFactor = Me.DisplayRectangle.Height / (2 ^ bitDepth / 2)
 
-        Dim diagonal As Double = Math.Sqrt(Me.DisplayRectangle.Width ^ 2 + Me.DisplayRectangle.Height ^ 2)
-        Dim w As Integer = Screen.FromControl(Me).Bounds.Width - Me.DisplayRectangle.Width
-        Dim h As Integer = Screen.FromControl(Me).Bounds.Height - Me.DisplayRectangle.Height
-        Dim m As Integer = Math.Sqrt(Math.Max(w, h))
-        distanceFactor = m / diagonal * 256
+            Dim diagonal As Double = Math.Sqrt(Me.DisplayRectangle.Width ^ 2 + Me.DisplayRectangle.Height ^ 2)
+            Dim w As Integer = Screen.FromControl(Me).Bounds.Width - Me.DisplayRectangle.Width
+            Dim h As Integer = Screen.FromControl(Me).Bounds.Height - Me.DisplayRectangle.Height
+            Dim m As Integer = Math.Sqrt(Math.Max(w, h))
+            distanceFactor = m / diagonal * 256
+        End If
     End Sub
 
     Private Sub StopAudioDevice()
@@ -188,7 +196,10 @@ Public Class FormMain
     End Sub
 
     Private Sub SetupEventHandlers()
+        AddHandler Me.ResizeBegin, Sub() If Me.WindowState = FormWindowState.Normal Then mainWindowBounds = Me.Bounds
+        AddHandler Me.ResizeEnd, Sub() If Me.WindowState = FormWindowState.Normal Then mainWindowBounds = Me.Bounds
         AddHandler Me.Resize, Sub() SetWindowParams()
+
         AddHandler PanelOptions.MouseLeave, Sub() PanelOptions.Visible = False
         AddHandler Me.MouseMove, Sub(s As Object, e1 As MouseEventArgs)
                                      If e1.X <= PanelOptions.Right Then
@@ -630,9 +641,77 @@ Public Class FormMain
         Return ps
     End Function
 
-    Public Shared Function Distance(p1 As Point, p2 As Point) As Double
+    Private Function Distance(p1 As Point, p2 As Point) As Double
         Dim dx As Double = p1.X - p2.X
         Dim dy As Double = p1.Y - p2.Y
         Return Math.Sqrt(dx * dx + dy * dy)
     End Function
+
+    Private Sub SaveSettings()
+        Dim xml As XElement = <settings>
+                                  <mainWindow>
+                                      <left><%= mainWindowBounds.Left %></left>
+                                      <top><%= mainWindowBounds.Top %></top>
+                                      <width><%= mainWindowBounds.Width %></width>
+                                      <height><%= mainWindowBounds.Height %></height>
+                                      <state><%= Me.WindowState %></state>
+                                  </mainWindow>
+                                  <processOptions>
+                                      <flipX><%= flipX %></flipX>
+                                      <flipY><%= flipY %></flipY>
+                                      <flipXY><%= flipXY %></flipXY>
+                                  </processOptions>
+                                  <apperance>
+                                      <backColor><%= PanelBackColor.BackColor.ToArgb() %></backColor>
+                                      <rayColor><%= PanelRayColor.BackColor.ToArgb() %></rayColor>
+                                      <leftChannelColor><%= PanelLeftChannel.BackColor.ToArgb() %></leftChannelColor>
+                                      <rightChannelColor><%= PanelRightChannel.BackColor.ToArgb() %></rightChannelColor>
+                                  </apperance>
+                                  <audioSource>
+                                      <deviceIndex><%= ComboBoxAudioDevices.SelectedIndex %></deviceIndex>
+                                  </audioSource>
+                              </settings>
+
+        xml.Save(SettingsFile)
+    End Sub
+
+    Private Sub LoadSettings()
+        If File.Exists(SettingsFile) Then
+            Dim xml As XElement = XDocument.Load(SettingsFile).<settings>(0)
+
+            Integer.TryParse(xml.<mainWindow>.<left>.Value, Me.Left)
+            Integer.TryParse(xml.<mainWindow>.<top>.Value, Me.Top)
+            Integer.TryParse(xml.<mainWindow>.<width>.Value, Me.Width)
+            Integer.TryParse(xml.<mainWindow>.<height>.Value, Me.Height)
+            mainWindowBounds = Me.Bounds
+            [Enum].TryParse(Of FormWindowState)(xml.<mainWindow>.<state>.Value, Me.WindowState)
+
+            Boolean.TryParse(xml.<processOptions>.<flipX>.Value, flipX)
+            Boolean.TryParse(xml.<processOptions>.<flipY>.Value, flipY)
+            Boolean.TryParse(xml.<processOptions>.<flipXY>.Value, flipXY)
+
+            Dim SetPanelColor = Sub(panel As Panel, value As String)
+                                    Dim argb As Integer
+                                    If Integer.TryParse(value, argb) Then panel.BackColor = Color.FromArgb(argb)
+                                End Sub
+
+            SetPanelColor(PanelBackColor, xml.<apperance>.<backColor>.Value)
+            SetPanelColor(PanelRayColor, xml.<apperance>.<rayColor>.Value)
+            SetPanelColor(PanelLeftChannel, xml.<apperance>.<leftChannelColor>.Value)
+            SetPanelColor(PanelRightChannel, xml.<apperance>.<rightChannelColor>.Value)
+
+            Integer.TryParse(xml.<audioSource>.<deviceIndex>.Value, ComboBoxAudioDevices.SelectedIndex)
+        Else
+            ComboBoxAudioDevices.SelectedIndex = 0
+            Me.Size = New Size(1024, 768)
+            Me.Location = New Point((Screen.PrimaryScreen.WorkingArea.Width - Me.Width) / 2, (Screen.PrimaryScreen.WorkingArea.Height - Me.Height) / 2)
+        End If
+    End Sub
+
+    Private ReadOnly Property SettingsFile As String
+        Get
+            Dim fp As New IO.DirectoryInfo(My.Computer.FileSystem.SpecialDirectories.CurrentUserApplicationData)
+            Return IO.Path.Combine(fp.Parent.FullName, "settings.dat")
+        End Get
+    End Property
 End Class
