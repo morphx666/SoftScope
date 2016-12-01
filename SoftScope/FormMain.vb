@@ -4,6 +4,13 @@ Imports NAudio.Wave
 Imports System.Xml.Linq
 
 Public Class FormMain
+    Private Enum AxisAssignments
+        Off = 0
+        LeftChannel = 1
+        RightChannel = 2
+        Standard = 3
+    End Enum
+
     Private Const ToDeg As Double = 180.0 / Math.PI
 
     Private audioSource As WaveIn
@@ -31,10 +38,19 @@ Public Class FormMain
     Private maxNormValue As Integer
     Private tmpB() As Byte
 
+    Private xAxis As AxisAssignments
+    Private xAxisTick As Double
+    Private xMspd As Integer ' Milliseconds per division
+    Private xAxisDivision As Integer
+    Private yAxis As AxisAssignments
+    Private x As Integer
+
     'Private filterL As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
     'Private filterR As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
 
-    Private rayColor As Color = Color.FromArgb(255, 90, 255, 90)
+    Private rayColor As Color
+    Private rayGlowColor As Color
+    Private rayAfterGlowColor As Color
 
     Private bufL() As Integer
     Private bufR() As Integer
@@ -76,10 +92,7 @@ Public Class FormMain
         LabelVersion.Text = My.Application.Info.Version.ToString()
 
         SetupEventHandlers()
-
-        For i As Integer = 0 To WaveIn.DeviceCount - 1
-            ComboBoxAudioDevices.Items.Add(WaveIn.GetCapabilities(i).ProductName)
-        Next
+        SetupComboBoxes()
 
         For i As Integer = 0 To fftHistSize - 1
             ReDim fftLHist(i)(fftSize2 - 1)
@@ -113,6 +126,8 @@ Public Class FormMain
             Dim h As Integer = Screen.FromControl(Me).Bounds.Height - Me.DisplayRectangle.Height
             Dim m As Integer = Math.Sqrt(Math.Max(w, h))
             distanceFactor = m / diagonal * 256
+
+            xAxisDivision = Me.DisplayRectangle.Width / 10
         End If
     End Sub
 
@@ -195,6 +210,17 @@ Public Class FormMain
         ComboBoxAudioDevices.Visible = False
     End Sub
 
+    Private Sub SetupComboBoxes()
+        For i As Integer = 0 To WaveIn.DeviceCount - 1
+            ComboBoxAudioDevices.Items.Add(WaveIn.GetCapabilities(i).ProductName)
+        Next
+
+        For Each v In [Enum].GetValues(GetType(AxisAssignments))
+            ComboBoxXAxis.Items.Add(v)
+            If v <> AxisAssignments.Standard Then ComboBoxYAxis.Items.Add(v)
+        Next
+    End Sub
+
     Private Sub SetupEventHandlers()
         AddHandler Me.ResizeBegin, Sub() If Me.WindowState = FormWindowState.Normal Then mainWindowBounds = Me.Bounds
         AddHandler Me.ResizeEnd, Sub() If Me.WindowState = FormWindowState.Normal Then mainWindowBounds = Me.Bounds
@@ -210,6 +236,22 @@ Public Class FormMain
         AddHandler LabelAudioSource.MouseEnter, Sub() ComboBoxAudioDevices.Visible = True
         AddHandler ComboBoxAudioDevices.MouseLeave, Sub() ComboBoxAudioDevices.Visible = False
         AddHandler ComboBoxAudioDevices.SelectedIndexChanged, Sub() InitAudioSource()
+
+        AddHandler LabelXAxis.MouseEnter, Sub() ComboBoxXAxis.Visible = True
+        AddHandler ComboBoxXAxis.MouseLeave, Sub() ComboBoxXAxis.Visible = False
+        AddHandler ComboBoxXAxis.SelectedIndexChanged, Sub()
+                                                           xAxis = CType(ComboBoxXAxis.SelectedItem, AxisAssignments)
+                                                           LabelXAxis.Text = xAxis.ToString()
+                                                           ComboBoxXAxis.Visible = False
+                                                       End Sub
+
+        AddHandler LabelYAxis.MouseEnter, Sub() ComboBoxYAxis.Visible = True
+        AddHandler ComboBoxYAxis.MouseLeave, Sub() ComboBoxYAxis.Visible = False
+        AddHandler ComboBoxYAxis.SelectedIndexChanged, Sub()
+                                                           yAxis = CType(ComboBoxYAxis.SelectedItem, AxisAssignments)
+                                                           LabelYAxis.Text = yAxis.ToString()
+                                                           ComboBoxYAxis.Visible = False
+                                                       End Sub
 
         AddHandler CheckBoxFlipX.CheckedChanged, Sub() flipX = CheckBoxFlipX.Checked
         AddHandler CheckBoxFlipY.CheckedChanged, Sub() flipY = CheckBoxFlipY.Checked
@@ -233,7 +275,7 @@ Public Class FormMain
 
         AddHandler PanelRayColor.Click, Sub()
                                             ChangeColor(PanelRayColor)
-                                            rayColor = PanelRayColor.BackColor
+                                            SetRayColors()
                                         End Sub
 
         AddHandler PanelLeftChannel.Click, Sub()
@@ -248,7 +290,6 @@ Public Class FormMain
     End Sub
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
-        Dim x As Integer
         Dim y As Integer
         Dim tmp As Integer
 
@@ -280,8 +321,19 @@ Public Class FormMain
                 'filterR.Update(normR)
                 'normR = filterR.Value
 
-                x = bufL(i / stp) * widthFactor
-                y = -bufR(i / stp) * heightFactor
+                Select Case xAxis
+                    Case AxisAssignments.Off : x = 0
+                    Case AxisAssignments.LeftChannel : x = bufL(i / stp) * widthFactor
+                    Case AxisAssignments.RightChannel : x = -bufR(i / stp) * heightFactor
+                    Case AxisAssignments.Standard
+                        x += xAxisDivision / xMspd
+                        x = x Mod Me.DisplayRectangle.Width
+                End Select
+                Select Case yAxis
+                    Case AxisAssignments.Off : y = 0
+                    Case AxisAssignments.LeftChannel : y = bufL(i / stp) * widthFactor
+                    Case AxisAssignments.RightChannel : y = -bufR(i / stp) * heightFactor
+                End Select
 
                 If flipX Then x = -x
                 If flipY Then y = -y
@@ -292,7 +344,7 @@ Public Class FormMain
                     y = tmp
                 End If
 
-                x += screenWidthHalf
+                If xAxis <> AxisAssignments.Standard Then x += screenWidthHalf
                 y += screenHeightHalf
 
                 pixels.Add(New Point(x, y))
@@ -436,14 +488,12 @@ Public Class FormMain
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
         Dim g As Graphics = e.Graphics
 
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-
         Dim pixelsCopy As List(Of Point)
         SyncLock pixels
             pixelsCopy = pixels.ToList()
         End SyncLock
 
-        Dim angle As Double
+        Dim distance As Double
         Dim len As Integer = pixelsCopy.Count - 2
 
         Dim pA1 As Point
@@ -454,10 +504,12 @@ Public Class FormMain
         Dim pB2 As Point
         Dim B12 As Double
 
-        For i As Integer = 0 To lastPoints.Count - 1 Step 2
+        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+
+        For i As Integer = 0 To lastPoints.Count - 2 Step 1
             pA1 = lastPoints(i)
             pB2 = lastPoints(i + 1)
-            Using p As New Pen(Color.FromArgb(Math.Max(0, 96 - Distance(pA1, pB2) * distanceFactor), rayColor), 6)
+            Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - Me.Distance(pA1, pB2) * distanceFactor), rayAfterGlowColor), 6)
                 g.DrawLine(p, pA1, pB2)
             End Using
         Next
@@ -477,7 +529,7 @@ Public Class FormMain
 
             A12 = Math.Atan2(pA1.Y - pA2.Y, pA1.X - pA2.X) * ToDeg
 
-            ' Skip line segments with the same slope and treat them as a lone single line
+            ' Skip line segments with the same slope and treat them as a single line
             For j = i + 1 To len
                 pB1 = pixelsCopy(j)
                 pB2 = pixelsCopy(j + 1)
@@ -485,18 +537,22 @@ Public Class FormMain
 
                 B12 = Math.Atan2(pB1.Y - pB2.Y, pB1.X - pB2.X) * ToDeg
                 If A12 <> B12 Then
-                    angle = Distance(pA1, pB2) * distanceFactor
-                    Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - angle), rayColor), 3)
-                        g.DrawLine(p, pA1, pB2)
+                    distance = Me.Distance(pA1, pB1) * distanceFactor
+
+                    g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+                    Using p As New Pen(Color.FromArgb(Math.Max(0, 196 - distance), rayGlowColor), 4)
+                        g.DrawLine(p, pA1, pB1)
                     End Using
-                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - angle), rayColor), 1)
-                        g.DrawLine(p, pA1, pB2)
+
+                    g.SmoothingMode = Drawing2D.SmoothingMode.None
+                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - distance), rayColor), 1)
+                        g.DrawLine(p, pA1, pB1)
                     End Using
 
                     lastPoints.Add(pA1)
                     lastPoints.Add(pB2)
 
-                    i = j
+                    i = j - 1
                     Exit For
                 End If
             Next
@@ -670,12 +726,32 @@ Public Class FormMain
                                   <audioSource>
                                       <deviceIndex><%= ComboBoxAudioDevices.SelectedIndex %></deviceIndex>
                                   </audioSource>
+                                  <axisAssignments>
+                                      <x>
+                                          <assignment><%= xAxis %></assignment>
+                                          <xMspd><%= xMspd %></xMspd>
+                                      </x>
+                                      <y>
+                                          <assignment><%= yAxis %></assignment>
+                                      </y>
+                                  </axisAssignments>
                               </settings>
 
         xml.Save(SettingsFile)
     End Sub
 
     Private Sub LoadSettings()
+        ' Setup defaults in case some parsing fails -----------
+        PanelBackColor.BackColor = Color.Black
+        PanelRayColor.BackColor = Color.FromArgb(255, 90, 255, 90)
+        PanelLeftChannel.BackColor = Color.SlateBlue
+        PanelRightChannel.BackColor = Color.OrangeRed
+
+        xAxis = AxisAssignments.LeftChannel
+        yAxis = AxisAssignments.RightChannel
+        xMspd = 100 ' 100ms per division
+        ' -----------------------------------------------------
+
         If File.Exists(SettingsFile) Then
             Dim xml As XElement = XDocument.Load(SettingsFile).<settings>(0)
 
@@ -701,11 +777,31 @@ Public Class FormMain
             SetPanelColor(PanelRightChannel, xml.<apperance>.<rightChannelColor>.Value)
 
             Integer.TryParse(xml.<audioSource>.<deviceIndex>.Value, ComboBoxAudioDevices.SelectedIndex)
+
+            Dim axis As AxisAssignments
+            If [Enum].TryParse(Of AxisAssignments)(xml.<axisAssignments>.<x>.<assignment>.Value, axis) Then xAxis = axis
+            If [Enum].TryParse(Of AxisAssignments)(xml.<axisAssignments>.<y>.<assignment>.Value, axis) Then yAxis = axis
         Else
             ComboBoxAudioDevices.SelectedIndex = 0
+
             Me.Size = New Size(1024, 768)
             Me.Location = New Point((Screen.PrimaryScreen.WorkingArea.Width - Me.Width) / 2, (Screen.PrimaryScreen.WorkingArea.Height - Me.Height) / 2)
         End If
+
+        ComboBoxXAxis.SelectedItem = xAxis
+        ComboBoxYAxis.SelectedItem = yAxis
+
+        SetRayColors()
+    End Sub
+
+    Private Sub SetRayColors()
+        rayColor = PanelRayColor.BackColor
+
+        Dim hls As New HLSRGB(rayColor)
+        hls.DarkenColor(0.4)
+        rayGlowColor = hls.Color
+        hls.DarkenColor(0.5)
+        rayAfterGlowColor = hls.Color
     End Sub
 
     Private ReadOnly Property SettingsFile As String
