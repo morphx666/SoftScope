@@ -177,6 +177,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <None Include="Resources\playIcon.png" />
     <None Include="README.md" />
     <None Include="Resources\icon.png" />
   </ItemGroup>

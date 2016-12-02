@@ -3,6 +3,8 @@ Imports System.IO
 Imports NAudio.Wave
 Imports System.Xml.Linq
 
+' <div>Icons made by <a href="http://www.flaticon.com/authors/madebyoliver" title="Madebyoliver">Madebyoliver</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
+
 Public Class FormMain
     Private Enum AxisAssignments
         Off = 0
@@ -106,7 +108,7 @@ Public Class FormMain
         LoadSettings()
 
         'PlayFromFile("youscope.wav")
-        PlayFromFile("kickstarter192khz.wav")
+        'PlayFromFile("kickstarter192khz.wav")
     End Sub
 
     Private Sub SetWindowParams()
@@ -253,7 +255,7 @@ Public Class FormMain
                                      End If
                                  End Sub
 
-        AddHandler LabelAudioSource.MouseEnter, Sub() ComboBoxAudioDevices.Visible = True
+        AddHandler LabelAudioSource.MouseEnter, Sub() If audioOut Is Nothing Then ComboBoxAudioDevices.Visible = True
         AddHandler ComboBoxAudioDevices.MouseLeave, Sub() ComboBoxAudioDevices.Visible = False
         AddHandler ComboBoxAudioDevices.SelectedIndexChanged, Sub() InitAudioSource()
 
@@ -308,8 +310,23 @@ Public Class FormMain
                                                 rightChannelColor = PanelRightChannel.BackColor
                                             End Sub
 
-        ' FIXME: Cheap trick to "fix" panel rendering issue, likely caused by the AllPaintingInWmPaint flag
+        ' FIXME: Cheap trick to "fix" panel rendering issues, likely caused by the AllPaintingInWmPaint flag
         AddHandler PanelOptions.MouseMove, Sub() If PanelOptions.Visible Then PanelOptions.Refresh()
+
+        AddHandler ButtonPlayFile.Click, Sub()
+                                             If audioOut IsNot Nothing Then
+                                                 StopAudioDevice()
+                                                 InitAudioSource()
+                                             Else
+                                                 Using dlg As New OpenFileDialog()
+                                                     dlg.Filter = "WAV Files|*.wav"
+                                                     If dlg.ShowDialog(Me) = DialogResult.OK Then
+                                                         PanelOptions.Visible = False
+                                                         PlayFromFile(dlg.FileName)
+                                                     End If
+                                                 End Using
+                                             End If
+                                         End Sub
     End Sub
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
@@ -618,9 +635,9 @@ Public Class FormMain
                                              End Sub
         audioOut.DesiredLatency = desiredLatency
         audioOut.NumberOfBuffers = numBuf
-        Application.DoEvents()
         audioOut.Init(wp)
-
         audioOut.Play()
+
+        Application.DoEvents()
     End Sub
 End Class

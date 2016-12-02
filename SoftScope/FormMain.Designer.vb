@@ -27,12 +27,12 @@ Partial Class FormMain
         Me.ComboBoxYAxis = New System.Windows.Forms.ComboBox()
         Me.ComboBoxXAxis = New System.Windows.Forms.ComboBox()
         Me.ComboBoxAudioDevices = New System.Windows.Forms.ComboBox()
+        Me.Panel4 = New System.Windows.Forms.Panel()
         Me.Panel3 = New System.Windows.Forms.Panel()
         Me.Panel2 = New System.Windows.Forms.Panel()
         Me.Panel1 = New System.Windows.Forms.Panel()
         Me.LabelVersion = New System.Windows.Forms.Label()
         Me.Label8 = New System.Windows.Forms.Label()
-        Me.PictureBox1 = New System.Windows.Forms.PictureBox()
         Me.PanelRightChannel = New System.Windows.Forms.Panel()
         Me.PanelLeftChannel = New System.Windows.Forms.Panel()
         Me.PanelRayColor = New System.Windows.Forms.Panel()
@@ -59,6 +59,8 @@ Partial Class FormMain
         Me.CheckBoxFFT = New System.Windows.Forms.CheckBox()
         Me.CheckBoxWaveForm = New System.Windows.Forms.CheckBox()
         Me.CheckBoxFlipX = New System.Windows.Forms.CheckBox()
+        Me.ButtonPlayFile = New System.Windows.Forms.Button()
+        Me.PictureBox1 = New System.Windows.Forms.PictureBox()
         Me.PanelOptions.SuspendLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -68,9 +70,11 @@ Partial Class FormMain
         Me.PanelOptions.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
             Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.PanelOptions.BackColor = System.Drawing.Color.FromArgb(CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer))
+        Me.PanelOptions.Controls.Add(Me.ButtonPlayFile)
         Me.PanelOptions.Controls.Add(Me.ComboBoxYAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxXAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxAudioDevices)
+        Me.PanelOptions.Controls.Add(Me.Panel4)
         Me.PanelOptions.Controls.Add(Me.Panel3)
         Me.PanelOptions.Controls.Add(Me.Panel2)
         Me.PanelOptions.Controls.Add(Me.Panel1)
@@ -145,12 +149,23 @@ Partial Class FormMain
         Me.ComboBoxAudioDevices.TabIndex = 8
         Me.ComboBoxAudioDevices.Visible = False
         '
+        'Panel4
+        '
+        Me.Panel4.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Panel4.BackColor = System.Drawing.Color.DimGray
+        Me.Panel4.Location = New System.Drawing.Point(3, 613)
+        Me.Panel4.Margin = New System.Windows.Forms.Padding(3, 18, 3, 18)
+        Me.Panel4.Name = "Panel4"
+        Me.Panel4.Size = New System.Drawing.Size(160, 1)
+        Me.Panel4.TabIndex = 7
+        '
         'Panel3
         '
         Me.Panel3.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.Panel3.BackColor = System.Drawing.Color.DimGray
-        Me.Panel3.Location = New System.Drawing.Point(5, 492)
+        Me.Panel3.Location = New System.Drawing.Point(3, 492)
         Me.Panel3.Margin = New System.Windows.Forms.Padding(3, 18, 3, 18)
         Me.Panel3.Name = "Panel3"
         Me.Panel3.Size = New System.Drawing.Size(160, 1)
@@ -199,16 +214,6 @@ Partial Class FormMain
         Me.Label8.Size = New System.Drawing.Size(92, 25)
         Me.Label8.TabIndex = 4
         Me.Label8.Text = "SoftScope"
-        '
-        'PictureBox1
-        '
-        Me.PictureBox1.Image = Global.SoftScope.My.Resources.Resources.icon
-        Me.PictureBox1.Location = New System.Drawing.Point(6, 12)
-        Me.PictureBox1.Name = "PictureBox1"
-        Me.PictureBox1.Size = New System.Drawing.Size(60, 50)
-        Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.PictureBox1.TabIndex = 5
-        Me.PictureBox1.TabStop = False
         '
         'PanelRightChannel
         '
@@ -504,6 +509,27 @@ Partial Class FormMain
         Me.CheckBoxFlipX.UseMnemonic = False
         Me.CheckBoxFlipX.UseVisualStyleBackColor = True
         '
+        'ButtonPlayFile
+        '
+        Me.ButtonPlayFile.FlatAppearance.BorderColor = System.Drawing.Color.DimGray
+        Me.ButtonPlayFile.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.ButtonPlayFile.Image = CType(resources.GetObject("ButtonPlayFile.Image"), System.Drawing.Image)
+        Me.ButtonPlayFile.Location = New System.Drawing.Point(51, 635)
+        Me.ButtonPlayFile.Name = "ButtonPlayFile"
+        Me.ButtonPlayFile.Size = New System.Drawing.Size(66, 66)
+        Me.ButtonPlayFile.TabIndex = 9
+        Me.ButtonPlayFile.UseVisualStyleBackColor = False
+        '
+        'PictureBox1
+        '
+        Me.PictureBox1.Image = Global.SoftScope.My.Resources.Resources.icon
+        Me.PictureBox1.Location = New System.Drawing.Point(6, 12)
+        Me.PictureBox1.Name = "PictureBox1"
+        Me.PictureBox1.Size = New System.Drawing.Size(60, 50)
+        Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox1.TabIndex = 5
+        Me.PictureBox1.TabStop = False
+        '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(7.0!, 15.0!)
@@ -560,4 +586,6 @@ Partial Class FormMain
     Friend WithEvents Label11 As Label
     Friend WithEvents Label14 As Label
     Friend WithEvents LabelMsPerDiv As Label
+    Friend WithEvents Panel4 As Panel
+    Friend WithEvents ButtonPlayFile As Button
 End Class
