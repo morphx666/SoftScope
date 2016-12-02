@@ -102,7 +102,7 @@ Public Class FormMain
         LoadSettings()
 
         'PlayFromFile("youscope.wav")
-        'PlayFromFile("kickstarter192khz.wav")
+        PlayFromFile("kickstarter192khz.wav")
     End Sub
 
     Private Sub SetWindowParams()
@@ -199,7 +199,7 @@ Public Class FormMain
         stp = channels * dataSize
         maxNormValue = 2 ^ bitDepth
 
-        bufferMilliseconds = (sampleRate / 2) / 1000
+        bufferMilliseconds = Math.Max(20, (sampleRate / 2) / 1000 - 8)
 
         ReDim tmpB(dataSize + (dataSize Mod 2) - 1)
         ReDim bufL(sampleRate * bufferMilliseconds / 1000 - 1)
@@ -569,26 +569,21 @@ Public Class FormMain
     End Property
 
     Private Sub PlayFromFile(fileName As String)
-        Dim l() As Single
-        Dim r() As Single
-        If Not WaveHelper.Read(fileName, l, r, sampleRate, channels, bitDepth) Then
-            MsgBox("Invalid WAV file", MsgBoxStyle.Exclamation)
-            Exit Sub
-        End If
+        Dim wfr As New WaveFileReader(fileName)
+        sampleRate = wfr.WaveFormat.SampleRate
+        channels = wfr.WaveFormat.Channels
+        bitDepth = wfr.WaveFormat.BitsPerSample
 
         audioSource.StopRecording()
         SetupBuffers()
 
         Dim gain As Double = 0.5
-        For i As Integer = 0 To l.Length - 1
-            l(i) *= 32767 * gain
-            r(i) *= 32767 * gain
-        Next
 
         Dim t As New Thread(Sub()
                                 Dim j As Integer = 0
                                 Dim i As Integer
                                 Dim sw As New Stopwatch()
+                                Dim b(channels - 1) As Single
 
                                 Dim lastFlipX As Boolean = flipX
                                 Dim lastFlipY As Boolean = flipY
@@ -607,13 +602,19 @@ Public Class FormMain
                                     SyncLock pixels
                                         pixels.Clear()
                                         For i = 0 To bufL.Length - 1
-                                            bufL(i) = l(j)
-                                            bufR(i) = r(j)
+                                            b = wfr.ReadNextSampleFrame()
+
+                                            bufL(i) = b(0) * 32767 * gain
+                                            If channels = 2 Then
+                                                bufR(i) = b(1) * 32767 * gain
+                                            Else
+                                                bufR(i) = 0
+                                            End If
 
                                             ProcessBuffer(i)
 
                                             j += 1
-                                            If j >= l.Length Then Exit For
+                                            If j >= wfr.Length Then Exit For
                                         Next
                                     End SyncLock
 
@@ -621,7 +622,9 @@ Public Class FormMain
 
                                     Thread.Sleep(Math.Max(0, bufferMilliseconds - sw.ElapsedMilliseconds))
                                     sw.Restart()
-                                Loop While j < l.Length AndAlso Not abortThreads
+                                Loop While j < wfr.Length AndAlso Not abortThreads
+
+                                wfr.Dispose()
 
                                 flipX = lastFlipX
                                 flipY = lastFlipY
