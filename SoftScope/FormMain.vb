@@ -12,6 +12,7 @@ Public Class FormMain
     End Enum
 
     Private audioSource As WaveIn
+    Private audioOut As WaveOut
 
     Private screenWidthHalf As Double
     Private widthFactor As Double
@@ -24,6 +25,8 @@ Public Class FormMain
     Private flipXY As Boolean
     Private flipX As Boolean
     Private flipY As Boolean
+
+    Private gain As Double = 1.0
 
     Private pixel As Pixel
     Private pixels As New List(Of Pixel)
@@ -42,7 +45,7 @@ Public Class FormMain
 
     Private xAxis As AxisAssignments
     Private xAxisTick As Double
-    Private xMspd As Integer ' Milliseconds per division
+    Private xMspd As Integer ' Milliseconds per division for xAxis = Standard
     Private xAxisDivision As Integer
     Private yAxis As AxisAssignments
 
@@ -56,6 +59,7 @@ Public Class FormMain
 
     Private bufL() As Integer
     Private bufR() As Integer
+    Private bufferLength As Integer
 
     Private leftChannelColor As Color = Color.DarkSlateBlue
     Private rightChannelColor As Color = Color.OrangeRed
@@ -125,6 +129,13 @@ Public Class FormMain
         If audioSource IsNot Nothing Then
             audioSource.StopRecording()
             audioSource.Dispose()
+            audioSource = Nothing
+        End If
+
+        If audioOut IsNot Nothing Then
+            audioOut.Stop()
+            audioOut.Dispose()
+            audioOut = Nothing
         End If
     End Sub
 
@@ -199,11 +210,13 @@ Public Class FormMain
         stp = channels * dataSize
         maxNormValue = 2 ^ bitDepth
 
-        bufferMilliseconds = Math.Max(20, (sampleRate / 2) / 1000 - 8)
+        bufferMilliseconds = 25 ' Math.Max(20, (sampleRate / 2) / 1000)
 
         ReDim tmpB(dataSize + (dataSize Mod 2) - 1)
-        ReDim bufL(sampleRate * bufferMilliseconds / 1000 - 1)
-        ReDim bufR(sampleRate * bufferMilliseconds / 1000 - 1)
+
+        bufferLength = sampleRate * bufferMilliseconds / 1000
+        ReDim bufL(bufferLength - 1)
+        ReDim bufR(bufferLength - 1)
 
         ReDim fftL(fftSize - 1)
         ReDim fftR(fftSize - 1)
@@ -213,8 +226,8 @@ Public Class FormMain
         Next
         fftWindowValues = FFT.GetWindowValues(fftSize, FFTWindowConstants.Hanning)
         fftWindowSum = FFT.GetWindowSum(fftSize, FFTWindowConstants.Hanning)
-        fftWavInIndex = 0
-        bufIndex = 0
+        fftWavDstIndex = 0
+        ffWavSrcBufIndex = 0
     End Sub
 
     Private Sub SetupComboBoxes()
@@ -301,39 +314,41 @@ Public Class FormMain
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
         Dim i As Integer
+        Dim bufferIndex As Integer
 
-        bufIndex = 0
+        ffWavSrcBufIndex = 0
 
         SyncLock pixels
             pixels.Clear()
 
             For i = i To e.Buffer.Length - 1 Step stp
+                bufferIndex = i / stp
                 Select Case bitDepth
                     Case 8
-                        bufL(i / stp) = (128 - e.Buffer(i))
-                        bufR(i / stp) = (128 - e.Buffer(i + dataSize))
+                        bufL(bufferIndex) = (128 - e.Buffer(i)) * gain
+                        bufR(bufferIndex) = (128 - e.Buffer(i + dataSize)) * gain
                     Case 16
                         Array.Copy(e.Buffer, i, tmpB, 0, dataSize)
-                        bufL(i / stp) = BitConverter.ToInt16(tmpB, 0)
+                        bufL(bufferIndex) = BitConverter.ToInt16(tmpB, 0) * gain
 
                         Array.Copy(e.Buffer, i + dataSize, tmpB, 0, dataSize)
-                        bufR(i / stp) = BitConverter.ToInt16(tmpB, 0)
+                        bufR(bufferIndex) = BitConverter.ToInt16(tmpB, 0) * gain
                     Case 24
                         Array.Copy(e.Buffer, i, tmpB, 1, dataSize)
-                        bufL(i / stp) = BitConverter.ToInt32(tmpB, 0)
+                        bufL(bufferIndex) = BitConverter.ToInt32(tmpB, 0) * gain
 
                         Array.Copy(e.Buffer, i + dataSize, tmpB, 1, dataSize)
-                        bufR(i / stp) = BitConverter.ToInt32(tmpB, 0)
+                        bufR(bufferIndex) = BitConverter.ToInt32(tmpB, 0) * gain
                 End Select
 
-                ProcessBuffer(i)
+                ProcessBuffer(bufferIndex)
             Next
 
             FillFFTBuffer()
         End SyncLock
     End Sub
 
-    Private Sub ProcessBuffer(i As Integer)
+    Private Sub ProcessBuffer(bufferIndex As Integer)
         Dim tmp As Integer
 
         'filterL.Update(normL)
@@ -344,16 +359,16 @@ Public Class FormMain
 
         Select Case xAxis
             Case AxisAssignments.Off : pixel.X = 0
-            Case AxisAssignments.LeftChannel : pixel.X = bufL(i / stp) * widthFactor
-            Case AxisAssignments.RightChannel : pixel.X = -bufR(i / stp) * heightFactor
+            Case AxisAssignments.LeftChannel : pixel.X = bufL(bufferIndex) * widthFactor
+            Case AxisAssignments.RightChannel : pixel.X = -bufR(bufferIndex) * heightFactor
             Case AxisAssignments.Standard
                 pixel.X += xAxisDivision / xMspd
                 pixel.X = pixel.X Mod Me.DisplayRectangle.Width
         End Select
         Select Case yAxis
             Case AxisAssignments.Off : pixel.Y = 0
-            Case AxisAssignments.LeftChannel : pixel.Y = bufL(i / stp) * widthFactor
-            Case AxisAssignments.RightChannel : pixel.Y = -bufR(i / stp) * heightFactor
+            Case AxisAssignments.LeftChannel : pixel.Y = bufL(bufferIndex) * widthFactor
+            Case AxisAssignments.RightChannel : pixel.Y = -bufR(bufferIndex) * heightFactor
         End Select
 
         ' FIXME: The FlipX and FlipXY options don't work correctly when X axis is set to "Standard"
@@ -569,73 +584,43 @@ Public Class FormMain
     End Property
 
     Private Sub PlayFromFile(fileName As String)
-        Dim wfr As New WaveFileReader(fileName)
-        sampleRate = wfr.WaveFormat.SampleRate
-        channels = wfr.WaveFormat.Channels
-        bitDepth = wfr.WaveFormat.BitsPerSample
+        Dim waveReader As New WaveFileReader(fileName)
+        sampleRate = waveReader.WaveFormat.SampleRate
+        channels = waveReader.WaveFormat.Channels
+        bitDepth = waveReader.WaveFormat.BitsPerSample
 
-        audioSource.StopRecording()
+        StopAudioDevice()
         SetupBuffers()
 
-        Dim gain As Double = 0.5
+        ' FIXME: This should be user customizable
+        gain = 0.5
 
-        Dim t As New Thread(Sub()
-                                Dim j As Integer = 0
-                                Dim i As Integer
-                                Dim sw As New Stopwatch()
-                                Dim b(channels - 1) As Single
+        Dim wp As New CustomWaveProvider(waveReader, bufferLength)
+        AddHandler wp.DataAvailable, Sub(b() As Byte) ProcessAudio(Me, New WaveInEventArgs(b, b.Length))
 
-                                Dim lastFlipX As Boolean = flipX
-                                Dim lastFlipY As Boolean = flipY
-                                Dim lastFlipXY As Boolean = flipXY
-                                Dim lastRayBrightness As Double = rayBrightness
+        ' FIXME: There has to be a better solution
+        ' Find the number of buffers for the waveOutDevice, so that internal WaveOut buffer is as closest to bufferLength * stp as possible
+        Dim desiredLatency As Integer = 300 ' WavOut default. See https://github.com/naudio/NAudio/blob/master/NAudio/Wave/WaveOutputs/WaveOut.cs#L102
+        Dim outBufLen As Integer
+        Dim numBuf As Integer = 0
+        Do
+            numBuf += 1
+            outBufLen = waveReader.WaveFormat.ConvertLatencyToByteSize(desiredLatency + numBuf - 1) / numBuf
+            Debug.WriteLine(bufferLength - outBufLen)
+        Loop While bufferLength * stp < outBufLen
 
-                                If fileName = "youscope.wav" Then
-                                    flipY = True
-                                    flipX = True
-                                    flipXY = True
-                                    rayBrightness = 0.75
-                                End If
+        audioOut = New WaveOut(WaveCallbackInfo.FunctionCallback())
+        AddHandler audioOut.PlaybackStopped, Sub()
+                                                 gain = 1.0
+                                                 StopAudioDevice()
+                                                 waveReader.Dispose()
+                                                 If Not abortThreads Then InitAudioSource()
+                                             End Sub
+        audioOut.DesiredLatency = desiredLatency
+        audioOut.NumberOfBuffers = numBuf
+        Application.DoEvents()
+        audioOut.Init(wp)
 
-                                sw.Start()
-                                Do
-                                    SyncLock pixels
-                                        pixels.Clear()
-                                        For i = 0 To bufL.Length - 1
-                                            b = wfr.ReadNextSampleFrame()
-
-                                            bufL(i) = b(0) * 32767 * gain
-                                            If channels = 2 Then
-                                                bufR(i) = b(1) * 32767 * gain
-                                            Else
-                                                bufR(i) = 0
-                                            End If
-
-                                            ProcessBuffer(i)
-
-                                            j += 1
-                                            If j >= wfr.Length Then Exit For
-                                        Next
-                                    End SyncLock
-
-                                    FillFFTBuffer()
-
-                                    Thread.Sleep(Math.Max(0, bufferMilliseconds - sw.ElapsedMilliseconds))
-                                    sw.Restart()
-                                Loop While j < wfr.Length AndAlso Not abortThreads
-
-                                wfr.Dispose()
-
-                                flipX = lastFlipX
-                                flipY = lastFlipY
-                                flipXY = lastFlipXY
-                                rayBrightness = lastRayBrightness
-
-                                Debug.WriteLine("Done reading file...")
-
-                                If Not abortThreads Then InitAudioSource()
-                            End Sub)
-        t.IsBackground = True
-        t.Start()
+        audioOut.Play()
     End Sub
 End Class

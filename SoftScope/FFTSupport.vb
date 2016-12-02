@@ -6,15 +6,15 @@
     Private fftHistSize As Integer = 4
     Private fftLHist(fftHistSize - 1)() As Double
     Private fftRHist(fftHistSize - 1)() As Double
-    Private fftWavInBufL(fftSize - 1) As Double
-    Private fftWavInBufR(fftSize - 1) As Double
-    Private fftWavInIndex As Integer
-    Private bufIndex As Integer
+    Private fftWavDstBufL(fftSize - 1) As Double
+    Private fftWavDstBufR(fftSize - 1) As Double
+    Private fftWavDstIndex As Integer
+    Private ffWavSrcBufIndex As Integer
     Private fftWindowValues() As Double
     Private fftWindowSum As Double
 
     Private Sub RenderFFT(g As Graphics, colorLeft As Pen, colorRight As Pen)
-        If fftWavInIndex = 0 Then FFT.FourierTransform(fftSize, fftWavInBufL, fftL, fftWavInBufR, fftR, False)
+        If fftWavDstIndex = 0 Then FFT.FourierTransform(fftSize, fftWavDstBufL, fftL, fftWavDstBufR, fftR, False)
 
         For i As Integer = 0 To fftHistSize - 2
             For j As Integer = 0 To fftSize2 - 1
@@ -71,22 +71,22 @@
         If renderAudioFFT Then
             Do
                 Do
-                    If bufIndex >= bufL.Length Then
-                        If fftWavInIndex >= fftSize Then fftWavInIndex = 0
-                        bufIndex = 0
+                    If ffWavSrcBufIndex >= bufferLength Then
+                        If fftWavDstIndex >= fftSize Then fftWavDstIndex = 0
+                        ffWavSrcBufIndex = 0
                         Exit Do
-                    ElseIf fftWavInIndex >= fftSize Then
-                        fftWavInIndex = 0
+                    ElseIf fftWavDstIndex >= fftSize Then
+                        fftWavDstIndex = 0
                         Exit Do
                     End If
 
-                    fftWavInBufL(fftWavInIndex) = bufL(bufIndex) * fftWindowValues(fftWavInIndex)
-                    fftWavInBufR(fftWavInIndex) = bufR(bufIndex) * fftWindowValues(fftWavInIndex)
+                    fftWavDstBufL(fftWavDstIndex) = bufL(ffWavSrcBufIndex) * fftWindowValues(fftWavDstIndex)
+                    fftWavDstBufR(fftWavDstIndex) = bufR(ffWavSrcBufIndex) * fftWindowValues(fftWavDstIndex)
 
-                    fftWavInIndex += 1
-                    bufIndex += 1
+                    fftWavDstIndex += 1
+                    ffWavSrcBufIndex += 1
                 Loop
-            Loop Until fftWavInIndex = 0 OrElse bufIndex = 0
+            Loop Until fftWavDstIndex = 0 OrElse ffWavSrcBufIndex = 0
         End If
     End Sub
 

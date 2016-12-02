@@ -9,7 +9,7 @@
         End Using
 
         Dim pts() As Point
-        For x As Integer = colorLeft.Width To bufL.Length - 2
+        For x As Integer = colorLeft.Width To bufferLength - 2
             pts = Buf2Pts(x, r, 1)
             g.DrawLine(colorLeft, pts(0), pts(1))
             pts = Buf2Pts(x, r, 2)
@@ -40,8 +40,8 @@
             y = r.Bottom - hh / 2
         End If
 
-        ps(0) = New Point(r.X + x / bufL.Length * r.Width, v1 + y)
-        ps(1) = New Point(r.X + (x + 1) / bufL.Length * r.Width, v2 + y)
+        ps(0) = New Point(r.X + x / bufferLength * r.Width, v1 + y)
+        ps(1) = New Point(r.X + (x + 1) / bufferLength * r.Width, v2 + y)
 
         Return ps
     End Function

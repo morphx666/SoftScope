@@ -95,6 +95,7 @@
     <Import Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Ckasses\CustomWaveProvider.vb" />
     <Compile Include="Ckasses\FFT.vb" />
     <Compile Include="Ckasses\WaveHelper.vb" />
     <Compile Include="FFTSupport.vb">
