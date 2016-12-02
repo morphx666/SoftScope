@@ -12,5 +12,6 @@ The result, when used with the [appropriate audio source](http://oscilloscopemus
 
 Screenshot of SoftCode v0.4 with the new wave form and spectrum panels.
 
-For best results, try using this file while playing it locally ([with a decent player](http://www.videolan.org)):
-http://space.jerobeamfenderson.net/download/kickstarter192khz.wav
+For best results, try using one of these files and play it using SoftScope 1.0b (or newer):
+* http://space.jerobeamfenderson.net/download/kickstarter192khz.wav
+* http://mirror.kapsi.fi/koodaa.mine.nu/tvt/youscope-wave.wav
