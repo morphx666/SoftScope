@@ -95,13 +95,13 @@
     <Import Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Ckasses\CustomWaveProvider.vb" />
-    <Compile Include="Ckasses\FFT.vb" />
-    <Compile Include="Ckasses\WaveHelper.vb" />
+    <Compile Include="Classes\CustomWaveProvider.vb" />
+    <Compile Include="Classes\FFT.vb" />
+    <Compile Include="Classes\WaveHelper.vb" />
     <Compile Include="FFTSupport.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Ckasses\FilterButterworth.vb" />
+    <Compile Include="Classes\FilterButterworth.vb" />
     <Compile Include="FormMain.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -109,7 +109,7 @@
       <DependentUpon>FormMain.vb</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Ckasses\HLSRGB.vb" />
+    <Compile Include="Classes\HLSRGB.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -125,9 +125,9 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Compile Include="Ckasses\Pixel.vb" />
-    <Compile Include="Ckasses\PixelComparer.vb" />
-    <Compile Include="Ckasses\Smooth.vb" />
+    <Compile Include="Classes\Pixel.vb" />
+    <Compile Include="Classes\PixelComparer.vb" />
+    <Compile Include="Classes\Smooth.vb" />
     <Compile Include="WaveFormSupport.vb">
       <SubType>Form</SubType>
     </Compile>
