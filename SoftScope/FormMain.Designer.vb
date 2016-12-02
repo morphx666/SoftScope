@@ -24,6 +24,7 @@ Partial Class FormMain
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Me.PanelOptions = New System.Windows.Forms.Panel()
+        Me.ButtonPlayFile = New System.Windows.Forms.Button()
         Me.ComboBoxYAxis = New System.Windows.Forms.ComboBox()
         Me.ComboBoxXAxis = New System.Windows.Forms.ComboBox()
         Me.ComboBoxAudioDevices = New System.Windows.Forms.ComboBox()
@@ -33,6 +34,7 @@ Partial Class FormMain
         Me.Panel1 = New System.Windows.Forms.Panel()
         Me.LabelVersion = New System.Windows.Forms.Label()
         Me.Label8 = New System.Windows.Forms.Label()
+        Me.PictureBox1 = New System.Windows.Forms.PictureBox()
         Me.PanelRightChannel = New System.Windows.Forms.Panel()
         Me.PanelLeftChannel = New System.Windows.Forms.Panel()
         Me.PanelRayColor = New System.Windows.Forms.Panel()
@@ -59,8 +61,7 @@ Partial Class FormMain
         Me.CheckBoxFFT = New System.Windows.Forms.CheckBox()
         Me.CheckBoxWaveForm = New System.Windows.Forms.CheckBox()
         Me.CheckBoxFlipX = New System.Windows.Forms.CheckBox()
-        Me.ButtonPlayFile = New System.Windows.Forms.Button()
-        Me.PictureBox1 = New System.Windows.Forms.PictureBox()
+        Me.SimpleTrackBarPlayProgress = New SoftScope.SimpleTrackBar()
         Me.PanelOptions.SuspendLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -70,6 +71,7 @@ Partial Class FormMain
         Me.PanelOptions.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
             Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.PanelOptions.BackColor = System.Drawing.Color.FromArgb(CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer))
+        Me.PanelOptions.Controls.Add(Me.SimpleTrackBarPlayProgress)
         Me.PanelOptions.Controls.Add(Me.ButtonPlayFile)
         Me.PanelOptions.Controls.Add(Me.ComboBoxYAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxXAxis)
@@ -112,6 +114,17 @@ Partial Class FormMain
         Me.PanelOptions.Size = New System.Drawing.Size(168, 729)
         Me.PanelOptions.TabIndex = 0
         Me.PanelOptions.Visible = False
+        '
+        'ButtonPlayFile
+        '
+        Me.ButtonPlayFile.FlatAppearance.BorderColor = System.Drawing.Color.DimGray
+        Me.ButtonPlayFile.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.ButtonPlayFile.Image = CType(resources.GetObject("ButtonPlayFile.Image"), System.Drawing.Image)
+        Me.ButtonPlayFile.Location = New System.Drawing.Point(51, 635)
+        Me.ButtonPlayFile.Name = "ButtonPlayFile"
+        Me.ButtonPlayFile.Size = New System.Drawing.Size(66, 66)
+        Me.ButtonPlayFile.TabIndex = 9
+        Me.ButtonPlayFile.UseVisualStyleBackColor = False
         '
         'ComboBoxYAxis
         '
@@ -214,6 +227,16 @@ Partial Class FormMain
         Me.Label8.Size = New System.Drawing.Size(92, 25)
         Me.Label8.TabIndex = 4
         Me.Label8.Text = "SoftScope"
+        '
+        'PictureBox1
+        '
+        Me.PictureBox1.Image = Global.SoftScope.My.Resources.Resources.icon
+        Me.PictureBox1.Location = New System.Drawing.Point(6, 12)
+        Me.PictureBox1.Name = "PictureBox1"
+        Me.PictureBox1.Size = New System.Drawing.Size(60, 50)
+        Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox1.TabIndex = 5
+        Me.PictureBox1.TabStop = False
         '
         'PanelRightChannel
         '
@@ -509,26 +532,18 @@ Partial Class FormMain
         Me.CheckBoxFlipX.UseMnemonic = False
         Me.CheckBoxFlipX.UseVisualStyleBackColor = True
         '
-        'ButtonPlayFile
+        'SimpleTrackBarPlayProgress
         '
-        Me.ButtonPlayFile.FlatAppearance.BorderColor = System.Drawing.Color.DimGray
-        Me.ButtonPlayFile.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.ButtonPlayFile.Image = CType(resources.GetObject("ButtonPlayFile.Image"), System.Drawing.Image)
-        Me.ButtonPlayFile.Location = New System.Drawing.Point(51, 635)
-        Me.ButtonPlayFile.Name = "ButtonPlayFile"
-        Me.ButtonPlayFile.Size = New System.Drawing.Size(66, 66)
-        Me.ButtonPlayFile.TabIndex = 9
-        Me.ButtonPlayFile.UseVisualStyleBackColor = False
-        '
-        'PictureBox1
-        '
-        Me.PictureBox1.Image = Global.SoftScope.My.Resources.Resources.icon
-        Me.PictureBox1.Location = New System.Drawing.Point(6, 12)
-        Me.PictureBox1.Name = "PictureBox1"
-        Me.PictureBox1.Size = New System.Drawing.Size(60, 50)
-        Me.PictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.PictureBox1.TabIndex = 5
-        Me.PictureBox1.TabStop = False
+        Me.SimpleTrackBarPlayProgress.Cursor = System.Windows.Forms.Cursors.Hand
+        Me.SimpleTrackBarPlayProgress.ForeColor = System.Drawing.Color.DeepSkyBlue
+        Me.SimpleTrackBarPlayProgress.Location = New System.Drawing.Point(51, 707)
+        Me.SimpleTrackBarPlayProgress.Max = 100
+        Me.SimpleTrackBarPlayProgress.Min = 0
+        Me.SimpleTrackBarPlayProgress.Name = "SimpleTrackBarPlayProgress"
+        Me.SimpleTrackBarPlayProgress.ReadOnly = False
+        Me.SimpleTrackBarPlayProgress.Size = New System.Drawing.Size(66, 4)
+        Me.SimpleTrackBarPlayProgress.TabIndex = 1
+        Me.SimpleTrackBarPlayProgress.Value = 50
         '
         'FormMain
         '
@@ -588,4 +603,5 @@ Partial Class FormMain
     Friend WithEvents LabelMsPerDiv As Label
     Friend WithEvents Panel4 As Panel
     Friend WithEvents ButtonPlayFile As Button
+    Friend WithEvents SimpleTrackBarPlayProgress As SimpleTrackBar
 End Class

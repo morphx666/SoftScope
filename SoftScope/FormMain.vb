@@ -15,6 +15,7 @@ Public Class FormMain
 
     Private audioSource As WaveIn
     Private audioOut As WaveOut
+    Private waveReader As WaveFileReader
 
     Private screenWidthHalf As Double
     Private widthFactor As Double
@@ -74,11 +75,12 @@ Public Class FormMain
     Private mainWindowBounds As Rectangle
 
     Private Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
-        SaveSettings()
-
         abortThreads = True
 
         StopAudioDevice()
+        SaveSettings()
+
+        Application.DoEvents()
     End Sub
 
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles Me.Load
@@ -139,6 +141,8 @@ Public Class FormMain
             audioOut.Dispose()
             audioOut = Nothing
         End If
+
+        If waveReader IsNot Nothing Then waveReader.Dispose()
     End Sub
 
     Private Sub InitAudioSource()
@@ -327,6 +331,8 @@ Public Class FormMain
                                                  End Using
                                              End If
                                          End Sub
+
+        AddHandler SimpleTrackBarPlayProgress.ValueChangedFromMouseClick, Sub() If audioOut IsNot Nothing Then waveReader.Position = waveReader.Length * SimpleTrackBarPlayProgress.Value / SimpleTrackBarPlayProgress.Max
     End Sub
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
@@ -577,6 +583,7 @@ Public Class FormMain
         ComboBoxXAxis.SelectedItem = xAxis
         ComboBoxYAxis.SelectedItem = yAxis
         LabelMsPerDiv.Text = xMspd.ToString()
+        SimpleTrackBarPlayProgress.Value = 0
 
         SetRayColors()
     End Sub
@@ -601,19 +608,29 @@ Public Class FormMain
     End Property
 
     Private Sub PlayFromFile(fileName As String)
-        Dim waveReader As New WaveFileReader(fileName)
+        StopAudioDevice()
+
+        waveReader = New WaveFileReader(fileName)
         sampleRate = waveReader.WaveFormat.SampleRate
         channels = waveReader.WaveFormat.Channels
         bitDepth = waveReader.WaveFormat.BitsPerSample
 
-        StopAudioDevice()
         SetupBuffers()
+
+        Dim lastPosWidth As Integer = 0
 
         ' FIXME: This should be user customizable
         gain = 0.5
 
         Dim wp As New CustomWaveProvider(waveReader, bufferLength)
-        AddHandler wp.DataAvailable, Sub(b() As Byte) ProcessAudio(Me, New WaveInEventArgs(b, b.Length))
+        AddHandler wp.DataAvailable, Sub(b() As Byte)
+                                         ProcessAudio(Me, New WaveInEventArgs(b, b.Length))
+                                         Dim posWidth As Integer = waveReader.Position / waveReader.Length * SimpleTrackBarPlayProgress.Max
+                                         If posWidth <> lastPosWidth Then
+                                             lastPosWidth = posWidth
+                                             Me.Invoke(New MethodInvoker(Sub() SimpleTrackBarPlayProgress.Value = posWidth))
+                                         End If
+                                     End Sub
 
         ' FIXME: There has to be a better solution
         ' Find the number of buffers for the waveOutDevice, so that internal WaveOut buffer is as close to bufferLength * stp as possible
@@ -631,6 +648,7 @@ Public Class FormMain
                                                  gain = 1.0
                                                  StopAudioDevice()
                                                  waveReader.Dispose()
+                                                 Me.Invoke(New MethodInvoker(Sub() SimpleTrackBarPlayProgress.Value = 0))
                                                  If Not abortThreads Then InitAudioSource()
                                              End Sub
         audioOut.DesiredLatency = desiredLatency

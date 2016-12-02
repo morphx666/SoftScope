@@ -98,6 +98,9 @@
     <Compile Include="Classes\CustomWaveProvider.vb" />
     <Compile Include="Classes\FFT.vb" />
     <Compile Include="Classes\WaveHelper.vb" />
+    <Compile Include="Controls\SimpleTrackBar.vb">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="FFTSupport.vb">
       <SubType>Form</SubType>
     </Compile>
