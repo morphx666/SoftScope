@@ -21,13 +21,16 @@ Public Class FormMain
     Private screenHeightHalf As Double
     Private heightFactor As Double
 
-    Private distanceFactor As Double
+    Private screenDiagonal As Double
 
     Private flipXY As Boolean
     Private flipX As Boolean
     Private flipY As Boolean
 
-    Private pixels As New List(Of Point)
+    Private pixel As New Pixel()
+    Private pixels As New List(Of Pixel)
+    Private pixelExactComparer As New PixelComparerExact()
+    Private pixelSimilarComparer As New PixelComparerSimilar(4)
 
     Private sampleRate As Integer
     Private channels As Integer
@@ -43,7 +46,6 @@ Public Class FormMain
     Private xMspd As Integer ' Milliseconds per division
     Private xAxisDivision As Integer
     Private yAxis As AxisAssignments
-    Private x As Integer
 
     'Private filterL As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
     'Private filterR As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
@@ -57,12 +59,17 @@ Public Class FormMain
 
     Private fftSize As FFTSizeConstants = FFTSizeConstants.FFTs2048
     Private fftSize2 As Integer = fftSize / 2
-    Private fftL(fftSize - 1) As ComplexDouble
-    Private fftR(fftSize - 1) As ComplexDouble
+    Private fftL() As ComplexDouble
+    Private fftR() As ComplexDouble
     Private fftHistSize As Integer = 4
     Private fftLHist(fftHistSize - 1)() As Double
     Private fftRHist(fftHistSize - 1)() As Double
-    Private fftWindowSum As Double = FFT.GetWindowSum(fftSize, FFTWindowConstants.Hanning)
+    Private fftWavInBufL(fftSize - 1) As Double
+    Private fftWavInBufR(fftSize - 1) As Double
+    Private fftWavInIndex As Integer
+    Private bufIndex As Integer
+    Private fftWindowValues() As Double
+    Private fftWindowSum As Double
 
     Private leftChannelColor As Color = Color.DarkSlateBlue
     Private rightChannelColor As Color = Color.OrangeRed
@@ -70,7 +77,7 @@ Public Class FormMain
     Private renderAudioWaveForm As Boolean = False
     Private renderAudioFFT As Boolean = False
 
-    Private lastPoints As New List(Of Point)
+    Private lastPoints As New List(Of Pixel)
 
     Private abortThreads As Boolean
 
@@ -121,11 +128,7 @@ Public Class FormMain
             screenHeightHalf = Me.DisplayRectangle.Height / 2
             heightFactor = Me.DisplayRectangle.Height / (2 ^ bitDepth / 2)
 
-            Dim diagonal As Double = Math.Sqrt(Me.DisplayRectangle.Width ^ 2 + Me.DisplayRectangle.Height ^ 2)
-            Dim w As Integer = Screen.FromControl(Me).Bounds.Width - Me.DisplayRectangle.Width
-            Dim h As Integer = Screen.FromControl(Me).Bounds.Height - Me.DisplayRectangle.Height
-            Dim m As Integer = Math.Sqrt(Math.Max(w, h))
-            distanceFactor = m / diagonal * 256
+            screenDiagonal = Math.Sqrt(Me.DisplayRectangle.Width ^ 2 + Me.DisplayRectangle.Height ^ 2)
 
             xAxisDivision = Me.DisplayRectangle.Width / 10
         End If
@@ -201,6 +204,17 @@ Public Class FormMain
         ReDim bufL(sampleRate * bufferMilliseconds / 1000 - 1)
         ReDim bufR(sampleRate * bufferMilliseconds / 1000 - 1)
 
+        ReDim fftL(fftSize - 1)
+        ReDim fftR(fftSize - 1)
+        For i As Integer = 0 To fftSize - 1
+            fftL(i) = New ComplexDouble()
+            fftR(i) = New ComplexDouble()
+        Next
+        fftWindowValues = FFT.GetWindowValues(fftSize, FFTWindowConstants.Hanning)
+        fftWindowSum = FFT.GetWindowSum(fftSize, FFTWindowConstants.Hanning)
+        fftWavInIndex = 0
+        bufIndex = 0
+
         audioSource.WaveFormat = New WaveFormat(sampleRate, bitDepth, channels)
         audioSource.BufferMilliseconds = bufferMilliseconds
         AddHandler audioSource.DataAvailable, AddressOf ProcessAudio
@@ -244,6 +258,10 @@ Public Class FormMain
                                                            LabelXAxis.Text = xAxis.ToString()
                                                            ComboBoxXAxis.Visible = False
                                                        End Sub
+        AddHandler TrackBarMsPerDiv.ValueChanged, Sub()
+                                                      xMspd = TrackBarMsPerDiv.Value
+                                                      LabelMsPerDiv.Text = TrackBarMsPerDiv.Value.ToString()
+                                                  End Sub
 
         AddHandler LabelYAxis.MouseEnter, Sub() ComboBoxYAxis.Visible = True
         AddHandler ComboBoxYAxis.MouseLeave, Sub() ComboBoxYAxis.Visible = False
@@ -290,13 +308,15 @@ Public Class FormMain
     End Sub
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
-        Dim y As Integer
         Dim tmp As Integer
+        Dim i As Integer
+
+        bufIndex = 0
 
         SyncLock pixels
             pixels.Clear()
 
-            For i As Integer = 0 To e.Buffer.Length - 1 Step stp
+            For i = i To e.Buffer.Length - 1 Step stp
                 Select Case bitDepth
                     Case 8
                         bufL(i / stp) = (128 - e.Buffer(i))
@@ -322,164 +342,41 @@ Public Class FormMain
                 'normR = filterR.Value
 
                 Select Case xAxis
-                    Case AxisAssignments.Off : x = 0
-                    Case AxisAssignments.LeftChannel : x = bufL(i / stp) * widthFactor
-                    Case AxisAssignments.RightChannel : x = -bufR(i / stp) * heightFactor
+                    Case AxisAssignments.Off : pixel.X = 0
+                    Case AxisAssignments.LeftChannel : pixel.X = bufL(i / stp) * widthFactor
+                    Case AxisAssignments.RightChannel : pixel.X = -bufR(i / stp) * heightFactor
                     Case AxisAssignments.Standard
-                        x += xAxisDivision / xMspd
-                        x = x Mod Me.DisplayRectangle.Width
+                        pixel.X += xAxisDivision / xMspd
+                        pixel.X = pixel.X Mod Me.DisplayRectangle.Width
                 End Select
                 Select Case yAxis
-                    Case AxisAssignments.Off : y = 0
-                    Case AxisAssignments.LeftChannel : y = bufL(i / stp) * widthFactor
-                    Case AxisAssignments.RightChannel : y = -bufR(i / stp) * heightFactor
+                    Case AxisAssignments.Off : pixel.Y = 0
+                    Case AxisAssignments.LeftChannel : pixel.Y = bufL(i / stp) * widthFactor
+                    Case AxisAssignments.RightChannel : pixel.Y = -bufR(i / stp) * heightFactor
                 End Select
 
-                If flipX Then x = -x
-                If flipY Then y = -y
+                If flipX Then pixel.X = -pixel.X
+                If flipY Then pixel.Y = -pixel.Y
 
                 If flipXY Then
-                    tmp = x
-                    x = y
-                    y = tmp
+                    tmp = pixel.X
+                    pixel.X = pixel.Y
+                    pixel.Y = tmp
                 End If
 
-                If xAxis <> AxisAssignments.Standard Then x += screenWidthHalf
-                y += screenHeightHalf
+                If xAxis <> AxisAssignments.Standard Then pixel.X += screenWidthHalf
+                pixel.Y += screenHeightHalf
 
-                pixels.Add(New Point(x, y))
+                If pixels.BinarySearch(pixel, pixelSimilarComparer) < 0 Then pixels.Add(pixel)
             Next
+
+            If renderAudioFFT Then
+                Do
+                    FillFFTBuffer()
+                Loop Until fftWavInIndex = 0 OrElse bufIndex = 0
+            End If
         End SyncLock
     End Sub
-
-    Private Sub RunTest()
-        Dim l() As Single
-        Dim r() As Single
-        ReadWav("youscope.wav", l, r)
-
-        Dim ln(l.Length - 1) As Integer
-        Dim rn(r.Length - 1) As Integer
-        For i As Integer = 0 To l.Length - 1
-            ln(i) = l(i) * 32767
-            rn(i) = r(i) * 32767
-        Next
-
-        Dim t As New Thread(Sub()
-                                Dim i As Integer = 0
-                                Dim n(8192 - 1) As Integer
-                                Dim f As Boolean = True
-
-                                Dim oneSecondInBytes = 48000 * 2 * 2
-                                Dim delay = (n.Length * 1000) / oneSecondInBytes
-
-                                Do
-                                    If f Then
-                                        For j = 0 To n.Length - 1 Step 2
-                                            n(j) = ln(i) / 5
-                                            n(j + 1) = rn(i + 1) / 5
-                                            i += 2
-                                        Next
-                                    End If
-                                    f = Not f
-
-                                    'DxvuCtrl_PeakValues(Nothing, n, Nothing)
-
-                                    Thread.Sleep(delay)
-                                Loop
-                            End Sub)
-        t.IsBackground = True
-        t.Start()
-    End Sub
-
-    Private Shared Function ReadWav(filename As String, ByRef L As Single(), ByRef R As Single()) As Boolean
-        L = Nothing
-        R = Nothing
-
-        Try
-            Using fs As FileStream = File.Open(filename, FileMode.Open)
-                Dim reader As New BinaryReader(fs)
-
-                ' chunk 0
-                Dim chunkID As Integer = reader.ReadInt32()
-                Dim fileSize As Integer = reader.ReadInt32()
-                Dim riffType As Integer = reader.ReadInt32()
-
-
-                ' chunk 1
-                Dim fmtID As Integer = reader.ReadInt32()
-                Dim fmtSize As Integer = reader.ReadInt32()
-                ' bytes for this chunk
-                Dim fmtCode As Integer = reader.ReadInt16()
-                Dim channels As Integer = reader.ReadInt16()
-                Dim sampleRate As Integer = reader.ReadInt32()
-                Dim byteRate As Integer = reader.ReadInt32()
-                Dim fmtBlockAlign As Integer = reader.ReadInt16()
-                Dim bitDepth As Integer = reader.ReadInt16()
-
-                If fmtSize = 18 Then
-                    ' Read any extra values
-                    Dim fmtExtraSize As Integer = reader.ReadInt16()
-                    reader.ReadBytes(fmtExtraSize)
-                End If
-
-                ' chunk 2
-                Dim dataID As Integer = reader.ReadInt32()
-                Dim bytes As Integer = reader.ReadInt32()
-
-                ' DATA!
-                Dim byteArray As Byte() = reader.ReadBytes(bytes)
-
-                Dim bytesForSamp As Integer = bitDepth / 8
-                Dim samps As Integer = bytes \ bytesForSamp
-
-
-                Dim asFloat As Single() = Nothing
-                Select Case bitDepth
-                    Case 64
-                        Dim asDouble As Double() = New Double(samps - 1) {}
-                        Buffer.BlockCopy(byteArray, 0, asDouble, 0, bytes)
-                        asFloat = Array.ConvertAll(asDouble, Function(e) CSng(e))
-                        Exit Select
-                    Case 32
-                        asFloat = New Single(samps - 1) {}
-                        Buffer.BlockCopy(byteArray, 0, asFloat, 0, bytes)
-                        Exit Select
-                    Case 16
-                        Dim asInt16 As Int16() = New Int16(samps - 1) {}
-                        Buffer.BlockCopy(byteArray, 0, asInt16, 0, bytes)
-                        asFloat = Array.ConvertAll(asInt16, Function(e) e / CSng(Int16.MaxValue))
-                        Exit Select
-                    Case Else
-                        Return False
-                End Select
-
-                Select Case channels
-                    Case 1
-                        L = asFloat
-                        R = Nothing
-                        Return True
-                    Case 2
-                        samps /= 2
-                        L = New Single(samps - 1) {}
-                        R = New Single(samps - 1) {}
-                        Dim s As Integer = 0
-                        For i As Integer = 0 To samps - 1
-                            L(i) = asFloat(s)
-                            R(i) = asFloat(s + 1)
-                            s += 2
-                        Next
-                        Return True
-                    Case Else
-                        Return False
-                End Select
-            End Using
-        Catch ex As Exception
-            Debug.WriteLine(ex.Message)
-            Return False
-        End Try
-
-        Return False
-    End Function
 
     Protected Overrides Sub OnPaintBackground(e As PaintEventArgs)
         ' Do nothing...
@@ -488,74 +385,60 @@ Public Class FormMain
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
         Dim g As Graphics = e.Graphics
 
-        Dim pixelsCopy As List(Of Point)
+        Dim pixelsCopy As List(Of Pixel)
         SyncLock pixels
             pixelsCopy = pixels.ToList()
         End SyncLock
 
-        Dim distance As Double
         Dim len As Integer = pixelsCopy.Count - 2
+        Dim i As Integer
+        'Dim j As Integer
 
-        Dim pA1 As Point
-        Dim pA2 As Point
+        Dim pA1 As Pixel
+        Dim pA2 As Pixel
         Dim A12 As Double
 
-        Dim pB1 As Point
-        Dim pB2 As Point
-        Dim B12 As Double
+        'Dim pB1 As Pixel
+        'Dim pB2 As Pixel
+        'Dim B12 As Double
 
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+        'g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+        'For i = 0 To lastPoints.Count - 2 Step 1
+        '    RenderLine(g, lastPoints(i), lastPoints(i + 1))
+        'Next
 
-        For i As Integer = 0 To lastPoints.Count - 2 Step 1
-            pA1 = lastPoints(i)
-            pB2 = lastPoints(i + 1)
-            Using p As New Pen(Color.FromArgb(Math.Max(0, 128 - Me.Distance(pA1, pB2) * distanceFactor), rayAfterGlowColor), 6)
-                g.DrawLine(p, pA1, pB2)
+        If pixels.Count = 1 Then
+            Using b As New SolidBrush(rayColor)
+                g.FillEllipse(b, New Rectangle(pixels(0), New Size(2, 2)))
             End Using
-        Next
-        lastPoints.Clear()
+        End If
 
-        For i As Integer = 0 To len
+        For i = 0 To len
             pA1 = pixelsCopy(i)
             pA2 = pixelsCopy(i + 1)
 
-            If i = 0 Then
-                Using b As New SolidBrush(rayColor)
-                    g.FillEllipse(b, New Rectangle(pA1, New Size(2, 2)))
-                End Using
-            End If
+            If pA1 = pA2 AndAlso i < len Then Continue For
 
-            If pA1 = pA2 Then Continue For
+            A12 = Math.Atan2(pA1.Y - pA2.Y, pA1.X - pA2.X) * ToDeg Mod 180.0
+            If A12 < 0 Then A12 = 360.0 - A12
 
-            A12 = Math.Atan2(pA1.Y - pA2.Y, pA1.X - pA2.X) * ToDeg
+            ' Unfortunately, this optimization causes too many issues
+            '' Skip line segments with the same slope and treat them as a single line
+            'For j = i + 1 To len
+            '    pB1 = pixelsCopy(j)
+            '    pB2 = pixelsCopy(j + 1)
+            '    If pB1 = pB2 Then Continue For
 
-            ' Skip line segments with the same slope and treat them as a single line
-            For j = i + 1 To len
-                pB1 = pixelsCopy(j)
-                pB2 = pixelsCopy(j + 1)
-                If pB1 = pB2 Then Continue For
+            '    B12 = Math.Atan2(pB1.Y - pB2.Y, pB1.X - pB2.X) * ToDeg Mod 180.0
+            '    If B12 < 0 Then B12 = 360.0 - B12
 
-                B12 = Math.Atan2(pB1.Y - pB2.Y, pB1.X - pB2.X) * ToDeg
-                If A12 <> B12 Then
-                    distance = Me.Distance(pA1, pB1) * distanceFactor
-
-                    g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-                    Using p As New Pen(Color.FromArgb(Math.Max(0, 196 - distance), rayGlowColor), 4)
-                        g.DrawLine(p, pA1, pB1)
-                    End Using
-
-                    g.SmoothingMode = Drawing2D.SmoothingMode.None
-                    Using p As New Pen(Color.FromArgb(Math.Max(8, 255 - distance), rayColor), 1)
-                        g.DrawLine(p, pA1, pB1)
-                    End Using
-
-                    lastPoints.Add(pA1)
-                    lastPoints.Add(pB2)
-
-                    i = j - 1
-                    Exit For
-                End If
-            Next
+            '    If A12 <> B12 Then
+            '        RenderLine(g, pA1, pB2)
+            '        Exit For
+            '    End If
+            'Next
+            'If j > len Then RenderLine(g, pA1, pB2)
+            RenderLine(g, pA1, pA2)
         Next
 
         Using colorLeft As New Pen(leftChannelColor, 1)
@@ -564,18 +447,42 @@ Public Class FormMain
                 If renderAudioFFT Then RenderFFT(g, colorLeft, colorRight)
             End Using
         End Using
+
+        lastPoints.Clear()
     End Sub
 
+    Private Sub RenderLine(g As Graphics, p1 As Pixel, p2 As Pixel)
+        Dim pixelIndex As Integer = lastPoints.BinarySearch(p1, pixelSimilarComparer)
+        If pixelIndex < 0 Then
+            p1.Alpha = 128
+        Else
+            p1.Alpha = lastPoints(pixelIndex).Alpha + 96
+        End If
+        p1.Alpha -= 30 * Distance(p1, p2) / screenDiagonal * 255
+        p2.Alpha = p1.Alpha
+
+        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+        Using p As New Pen(Color.FromArgb(p1.Alpha / 1.5, rayGlowColor), 6)
+            g.DrawLine(p, p1, p2)
+        End Using
+
+        g.SmoothingMode = Drawing2D.SmoothingMode.None
+        Using p As New Pen(Color.FromArgb(p1.Alpha, rayColor), 1)
+            g.DrawLine(p, p1, p2)
+        End Using
+
+        lastPoints.Add(p1)
+        lastPoints.Add(p2)
+    End Sub
+
+    Private Function Distance(p1 As Pixel, p2 As Pixel) As Double
+        Dim dx As Double = p1.X - p2.X
+        Dim dy As Double = p1.Y - p2.Y
+        Return Math.Sqrt(dx * dx + dy * dy)
+    End Function
+
     Private Sub RenderFFT(g As Graphics, colorLeft As Pen, colorRight As Pen)
-        Dim bufDblL(bufL.Length - 1) As Double
-        Dim bufDblR(bufR.Length - 1) As Double
-
-        For i As Integer = 0 To bufL.Length - 1
-            bufDblL(i) = bufL(i) * FFT.ApplyWindow(i, fftSize, FFTWindowConstants.Hanning)
-            bufDblR(i) = bufR(i) * FFT.ApplyWindow(i, fftSize, FFTWindowConstants.Hanning)
-        Next
-
-        FFT.FourierTransform(fftSize, bufDblL, fftL, bufDblR, fftR, False)
+        If fftWavInIndex = 0 Then FFT.FourierTransform(fftSize, fftWavInBufL, fftL, fftWavInBufR, fftR, False)
 
         For i As Integer = 0 To fftHistSize - 2
             For j As Integer = 0 To fftSize2 - 1
@@ -602,7 +509,7 @@ Public Class FormMain
         Dim newDivX As Integer
 
         Using p As New Pen(Color.FromArgb(128, Color.DarkSlateGray))
-            For x As Integer = 0 To fftSize2 - 1 Step 100
+            For x As Integer = 0 To fftSize2 - 1 Step fftSize2 / 5
                 For x1 As Integer = 0 To 10
                     newDivX = r.X + x + Math.Min(Math.Log10(x1 + 1) / Math.Log10(fftSize2 - 1) * r.Width, r.Width) + s.Width
                     g.DrawLine(p, newDivX, r.Y, newDivX, r.Bottom)
@@ -626,6 +533,25 @@ Public Class FormMain
         Using sb As New SolidBrush(Color.FromArgb(128, 33, 33, 33))
             g.FillRectangle(sb, r)
         End Using
+    End Sub
+
+    Private Sub FillFFTBuffer()
+        Do
+            If bufIndex >= bufL.Length Then
+                If fftWavInIndex >= fftSize Then fftWavInIndex = 0
+                bufIndex = 0
+                Exit Do
+            ElseIf fftWavInIndex >= fftSize Then
+                fftWavInIndex = 0
+                Exit Do
+            End If
+
+            fftWavInBufL(fftWavInIndex) = bufL(bufIndex) * fftWindowValues(fftWavInIndex)
+            fftWavInBufR(fftWavInIndex) = bufR(bufIndex) * fftWindowValues(fftWavInIndex)
+
+            fftWavInIndex += 1
+            bufIndex += 1
+        Loop
     End Sub
 
     Private Function FFT2Pts(x As Integer, r As Rectangle, channel As Integer, fftSize As FFTSizeConstants) As Size
@@ -695,12 +621,6 @@ Public Class FormMain
         ps(1) = New Point(r.X + (x + 1) / bufL.Length * r.Width, v2 + y)
 
         Return ps
-    End Function
-
-    Private Function Distance(p1 As Point, p2 As Point) As Double
-        Dim dx As Double = p1.X - p2.X
-        Dim dy As Double = p1.Y - p2.Y
-        Return Math.Sqrt(dx * dx + dy * dy)
     End Function
 
     Private Sub SaveSettings()
@@ -790,6 +710,8 @@ Public Class FormMain
 
         ComboBoxXAxis.SelectedItem = xAxis
         ComboBoxYAxis.SelectedItem = yAxis
+        TrackBarMsPerDiv.Value = xMspd
+        LabelMsPerDiv.Text = xMspd.ToString()
 
         SetRayColors()
     End Sub
@@ -798,7 +720,7 @@ Public Class FormMain
         rayColor = PanelRayColor.BackColor
 
         Dim hls As New HLSRGB(rayColor)
-        hls.DarkenColor(0.4)
+        hls.DarkenColor(0.3)
         rayGlowColor = hls.Color
         hls.DarkenColor(0.5)
         rayAfterGlowColor = hls.Color

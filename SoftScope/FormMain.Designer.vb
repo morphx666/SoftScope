@@ -24,7 +24,10 @@ Partial Class FormMain
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Me.PanelOptions = New System.Windows.Forms.Panel()
+        Me.ComboBoxYAxis = New System.Windows.Forms.ComboBox()
+        Me.ComboBoxXAxis = New System.Windows.Forms.ComboBox()
         Me.ComboBoxAudioDevices = New System.Windows.Forms.ComboBox()
+        Me.Panel3 = New System.Windows.Forms.Panel()
         Me.Panel2 = New System.Windows.Forms.Panel()
         Me.Panel1 = New System.Windows.Forms.Panel()
         Me.LabelVersion = New System.Windows.Forms.Label()
@@ -39,9 +42,14 @@ Partial Class FormMain
         Me.Label4 = New System.Windows.Forms.Label()
         Me.LabelAudioFormat = New System.Windows.Forms.Label()
         Me.LabelAudioSource = New System.Windows.Forms.Label()
+        Me.LabelYAxis = New System.Windows.Forms.Label()
+        Me.LabelXAxis = New System.Windows.Forms.Label()
+        Me.Label12 = New System.Windows.Forms.Label()
+        Me.Label11 = New System.Windows.Forms.Label()
         Me.Label3 = New System.Windows.Forms.Label()
         Me.Label7 = New System.Windows.Forms.Label()
         Me.Label2 = New System.Windows.Forms.Label()
+        Me.Label10 = New System.Windows.Forms.Label()
         Me.Label9 = New System.Windows.Forms.Label()
         Me.Label1 = New System.Windows.Forms.Label()
         Me.CheckBoxFlipY = New System.Windows.Forms.CheckBox()
@@ -49,16 +57,12 @@ Partial Class FormMain
         Me.CheckBoxFFT = New System.Windows.Forms.CheckBox()
         Me.CheckBoxWaveForm = New System.Windows.Forms.CheckBox()
         Me.CheckBoxFlipX = New System.Windows.Forms.CheckBox()
-        Me.Panel3 = New System.Windows.Forms.Panel()
-        Me.Label10 = New System.Windows.Forms.Label()
-        Me.ComboBoxYAxis = New System.Windows.Forms.ComboBox()
-        Me.LabelXAxis = New System.Windows.Forms.Label()
-        Me.LabelYAxis = New System.Windows.Forms.Label()
-        Me.ComboBoxXAxis = New System.Windows.Forms.ComboBox()
-        Me.Label11 = New System.Windows.Forms.Label()
-        Me.Label12 = New System.Windows.Forms.Label()
+        Me.TrackBarMsPerDiv = New System.Windows.Forms.TrackBar()
+        Me.Label14 = New System.Windows.Forms.Label()
+        Me.LabelMsPerDiv = New System.Windows.Forms.Label()
         Me.PanelOptions.SuspendLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.TrackBarMsPerDiv, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'PanelOptions
@@ -66,6 +70,7 @@ Partial Class FormMain
         Me.PanelOptions.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
             Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.PanelOptions.BackColor = System.Drawing.Color.FromArgb(CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer))
+        Me.PanelOptions.Controls.Add(Me.TrackBarMsPerDiv)
         Me.PanelOptions.Controls.Add(Me.ComboBoxYAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxXAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxAudioDevices)
@@ -85,7 +90,9 @@ Partial Class FormMain
         Me.PanelOptions.Controls.Add(Me.LabelAudioFormat)
         Me.PanelOptions.Controls.Add(Me.LabelAudioSource)
         Me.PanelOptions.Controls.Add(Me.LabelYAxis)
+        Me.PanelOptions.Controls.Add(Me.LabelMsPerDiv)
         Me.PanelOptions.Controls.Add(Me.LabelXAxis)
+        Me.PanelOptions.Controls.Add(Me.Label14)
         Me.PanelOptions.Controls.Add(Me.Label12)
         Me.PanelOptions.Controls.Add(Me.Label11)
         Me.PanelOptions.Controls.Add(Me.Label3)
@@ -105,8 +112,34 @@ Partial Class FormMain
         Me.PanelOptions.TabIndex = 0
         Me.PanelOptions.Visible = False
         '
+        'ComboBoxYAxis
+        '
+        Me.ComboBoxYAxis.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.ComboBoxYAxis.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ComboBoxYAxis.FormattingEnabled = True
+        Me.ComboBoxYAxis.Location = New System.Drawing.Point(76, 553)
+        Me.ComboBoxYAxis.Name = "ComboBoxYAxis"
+        Me.ComboBoxYAxis.Size = New System.Drawing.Size(87, 23)
+        Me.ComboBoxYAxis.TabIndex = 8
+        Me.ComboBoxYAxis.Visible = False
+        '
+        'ComboBoxXAxis
+        '
+        Me.ComboBoxXAxis.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.ComboBoxXAxis.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ComboBoxXAxis.FormattingEnabled = True
+        Me.ComboBoxXAxis.Location = New System.Drawing.Point(76, 532)
+        Me.ComboBoxXAxis.Name = "ComboBoxXAxis"
+        Me.ComboBoxXAxis.Size = New System.Drawing.Size(87, 23)
+        Me.ComboBoxXAxis.TabIndex = 8
+        Me.ComboBoxXAxis.Visible = False
+        '
         'ComboBoxAudioDevices
         '
+        Me.ComboBoxAudioDevices.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.ComboBoxAudioDevices.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.ComboBoxAudioDevices.FormattingEnabled = True
         Me.ComboBoxAudioDevices.Location = New System.Drawing.Point(24, 432)
@@ -115,8 +148,21 @@ Partial Class FormMain
         Me.ComboBoxAudioDevices.TabIndex = 8
         Me.ComboBoxAudioDevices.Visible = False
         '
+        'Panel3
+        '
+        Me.Panel3.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Panel3.BackColor = System.Drawing.Color.DimGray
+        Me.Panel3.Location = New System.Drawing.Point(5, 492)
+        Me.Panel3.Margin = New System.Windows.Forms.Padding(3, 18, 3, 18)
+        Me.Panel3.Name = "Panel3"
+        Me.Panel3.Size = New System.Drawing.Size(160, 1)
+        Me.Panel3.TabIndex = 7
+        '
         'Panel2
         '
+        Me.Panel2.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.Panel2.BackColor = System.Drawing.Color.DimGray
         Me.Panel2.Location = New System.Drawing.Point(3, 392)
         Me.Panel2.Margin = New System.Windows.Forms.Padding(3, 18, 3, 18)
@@ -126,6 +172,8 @@ Partial Class FormMain
         '
         'Panel1
         '
+        Me.Panel1.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.Panel1.BackColor = System.Drawing.Color.DimGray
         Me.Panel1.Location = New System.Drawing.Point(3, 83)
         Me.Panel1.Margin = New System.Windows.Forms.Padding(3, 18, 3, 18)
@@ -258,6 +306,52 @@ Partial Class FormMain
         Me.LabelAudioSource.Text = "Sound Card Name"
         Me.LabelAudioSource.UseMnemonic = False
         '
+        'LabelYAxis
+        '
+        Me.LabelYAxis.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.LabelYAxis.Location = New System.Drawing.Point(74, 556)
+        Me.LabelYAxis.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.LabelYAxis.Name = "LabelYAxis"
+        Me.LabelYAxis.Size = New System.Drawing.Size(89, 15)
+        Me.LabelYAxis.TabIndex = 2
+        Me.LabelYAxis.Text = "Right Channel"
+        Me.LabelYAxis.UseMnemonic = False
+        '
+        'LabelXAxis
+        '
+        Me.LabelXAxis.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.LabelXAxis.Location = New System.Drawing.Point(74, 535)
+        Me.LabelXAxis.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.LabelXAxis.Name = "LabelXAxis"
+        Me.LabelXAxis.Size = New System.Drawing.Size(89, 15)
+        Me.LabelXAxis.TabIndex = 2
+        Me.LabelXAxis.Text = "Left Channel"
+        Me.LabelXAxis.UseMnemonic = False
+        '
+        'Label12
+        '
+        Me.Label12.AutoSize = True
+        Me.Label12.Location = New System.Drawing.Point(18, 556)
+        Me.Label12.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.Label12.Name = "Label12"
+        Me.Label12.Size = New System.Drawing.Size(38, 15)
+        Me.Label12.TabIndex = 2
+        Me.Label12.Text = "Y Axis"
+        Me.Label12.UseMnemonic = False
+        '
+        'Label11
+        '
+        Me.Label11.AutoSize = True
+        Me.Label11.Location = New System.Drawing.Point(18, 535)
+        Me.Label11.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.Label11.Name = "Label11"
+        Me.Label11.Size = New System.Drawing.Size(38, 15)
+        Me.Label11.TabIndex = 2
+        Me.Label11.Text = "X Axis"
+        Me.Label11.UseMnemonic = False
+        '
         'Label3
         '
         Me.Label3.AutoSize = True
@@ -292,6 +386,18 @@ Partial Class FormMain
         Me.Label2.Size = New System.Drawing.Size(73, 15)
         Me.Label2.TabIndex = 1
         Me.Label2.Text = "Appearance"
+        '
+        'Label10
+        '
+        Me.Label10.AutoSize = True
+        Me.Label10.Font = New System.Drawing.Font("Segoe UI", 9.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label10.ForeColor = System.Drawing.Color.WhiteSmoke
+        Me.Label10.Location = New System.Drawing.Point(9, 514)
+        Me.Label10.Margin = New System.Windows.Forms.Padding(3)
+        Me.Label10.Name = "Label10"
+        Me.Label10.Size = New System.Drawing.Size(121, 15)
+        Me.Label10.TabIndex = 1
+        Me.Label10.Text = "Oscilloscope Options"
         '
         'Label9
         '
@@ -377,90 +483,44 @@ Partial Class FormMain
         Me.CheckBoxFlipX.UseMnemonic = False
         Me.CheckBoxFlipX.UseVisualStyleBackColor = True
         '
-        'Panel3
+        'TrackBarMsPerDiv
         '
-        Me.Panel3.BackColor = System.Drawing.Color.DimGray
-        Me.Panel3.Location = New System.Drawing.Point(5, 492)
-        Me.Panel3.Margin = New System.Windows.Forms.Padding(3, 18, 3, 18)
-        Me.Panel3.Name = "Panel3"
-        Me.Panel3.Size = New System.Drawing.Size(160, 1)
-        Me.Panel3.TabIndex = 7
+        Me.TrackBarMsPerDiv.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.TrackBarMsPerDiv.AutoSize = False
+        Me.TrackBarMsPerDiv.LargeChange = 100
+        Me.TrackBarMsPerDiv.Location = New System.Drawing.Point(72, 577)
+        Me.TrackBarMsPerDiv.Maximum = 1000
+        Me.TrackBarMsPerDiv.Minimum = 10
+        Me.TrackBarMsPerDiv.Name = "TrackBarMsPerDiv"
+        Me.TrackBarMsPerDiv.Size = New System.Drawing.Size(65, 18)
+        Me.TrackBarMsPerDiv.SmallChange = 10
+        Me.TrackBarMsPerDiv.TabIndex = 9
+        Me.TrackBarMsPerDiv.TickFrequency = 100
+        Me.TrackBarMsPerDiv.Value = 100
         '
-        'Label10
+        'Label14
         '
-        Me.Label10.AutoSize = True
-        Me.Label10.Font = New System.Drawing.Font("Segoe UI", 9.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Label10.ForeColor = System.Drawing.Color.WhiteSmoke
-        Me.Label10.Location = New System.Drawing.Point(9, 514)
-        Me.Label10.Margin = New System.Windows.Forms.Padding(3)
-        Me.Label10.Name = "Label10"
-        Me.Label10.Size = New System.Drawing.Size(121, 15)
-        Me.Label10.TabIndex = 1
-        Me.Label10.Text = "Oscilloscope Options"
+        Me.Label14.AutoSize = True
+        Me.Label14.Location = New System.Drawing.Point(18, 577)
+        Me.Label14.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.Label14.Name = "Label14"
+        Me.Label14.Size = New System.Drawing.Size(45, 15)
+        Me.Label14.TabIndex = 2
+        Me.Label14.Text = "Ms/Div"
+        Me.Label14.UseMnemonic = False
         '
-        'ComboBoxYAxis
+        'LabelMsPerDiv
         '
-        Me.ComboBoxYAxis.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
-        Me.ComboBoxYAxis.FormattingEnabled = True
-        Me.ComboBoxYAxis.Location = New System.Drawing.Point(76, 553)
-        Me.ComboBoxYAxis.Name = "ComboBoxYAxis"
-        Me.ComboBoxYAxis.Size = New System.Drawing.Size(87, 23)
-        Me.ComboBoxYAxis.TabIndex = 8
-        Me.ComboBoxYAxis.Visible = False
-        '
-        'LabelXAxis
-        '
-        Me.LabelXAxis.AutoSize = True
-        Me.LabelXAxis.Location = New System.Drawing.Point(74, 535)
-        Me.LabelXAxis.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
-        Me.LabelXAxis.Name = "LabelXAxis"
-        Me.LabelXAxis.Size = New System.Drawing.Size(74, 15)
-        Me.LabelXAxis.TabIndex = 2
-        Me.LabelXAxis.Text = "Left Channel"
-        Me.LabelXAxis.UseMnemonic = False
-        '
-        'LabelYAxis
-        '
-        Me.LabelYAxis.AutoSize = True
-        Me.LabelYAxis.Location = New System.Drawing.Point(74, 556)
-        Me.LabelYAxis.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
-        Me.LabelYAxis.Name = "LabelYAxis"
-        Me.LabelYAxis.Size = New System.Drawing.Size(82, 15)
-        Me.LabelYAxis.TabIndex = 2
-        Me.LabelYAxis.Text = "Right Channel"
-        Me.LabelYAxis.UseMnemonic = False
-        '
-        'ComboBoxXAxis
-        '
-        Me.ComboBoxXAxis.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
-        Me.ComboBoxXAxis.FormattingEnabled = True
-        Me.ComboBoxXAxis.Location = New System.Drawing.Point(76, 532)
-        Me.ComboBoxXAxis.Name = "ComboBoxXAxis"
-        Me.ComboBoxXAxis.Size = New System.Drawing.Size(87, 23)
-        Me.ComboBoxXAxis.TabIndex = 8
-        Me.ComboBoxXAxis.Visible = False
-        '
-        'Label11
-        '
-        Me.Label11.AutoSize = True
-        Me.Label11.Location = New System.Drawing.Point(18, 535)
-        Me.Label11.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
-        Me.Label11.Name = "Label11"
-        Me.Label11.Size = New System.Drawing.Size(38, 15)
-        Me.Label11.TabIndex = 2
-        Me.Label11.Text = "X Axis"
-        Me.Label11.UseMnemonic = False
-        '
-        'Label12
-        '
-        Me.Label12.AutoSize = True
-        Me.Label12.Location = New System.Drawing.Point(18, 556)
-        Me.Label12.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
-        Me.Label12.Name = "Label12"
-        Me.Label12.Size = New System.Drawing.Size(38, 15)
-        Me.Label12.TabIndex = 2
-        Me.Label12.Text = "Y Axis"
-        Me.Label12.UseMnemonic = False
+        Me.LabelMsPerDiv.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.LabelMsPerDiv.Location = New System.Drawing.Point(133, 577)
+        Me.LabelMsPerDiv.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.LabelMsPerDiv.Name = "LabelMsPerDiv"
+        Me.LabelMsPerDiv.Size = New System.Drawing.Size(32, 15)
+        Me.LabelMsPerDiv.TabIndex = 2
+        Me.LabelMsPerDiv.Text = "1000"
+        Me.LabelMsPerDiv.TextAlign = System.Drawing.ContentAlignment.MiddleRight
+        Me.LabelMsPerDiv.UseMnemonic = False
         '
         'FormMain
         '
@@ -478,6 +538,7 @@ Partial Class FormMain
         Me.PanelOptions.ResumeLayout(False)
         Me.PanelOptions.PerformLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.TrackBarMsPerDiv, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
@@ -516,4 +577,7 @@ Partial Class FormMain
     Friend WithEvents Label10 As Label
     Friend WithEvents Label12 As Label
     Friend WithEvents Label11 As Label
+    Friend WithEvents TrackBarMsPerDiv As TrackBar
+    Friend WithEvents Label14 As Label
+    Friend WithEvents LabelMsPerDiv As Label
 End Class
