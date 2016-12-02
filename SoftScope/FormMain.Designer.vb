@@ -24,6 +24,7 @@ Partial Class FormMain
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Me.PanelOptions = New System.Windows.Forms.Panel()
+        Me.SimpleTrackBarPlayProgress = New SoftScope.SimpleTrackBar()
         Me.ButtonPlayFile = New System.Windows.Forms.Button()
         Me.ComboBoxYAxis = New System.Windows.Forms.ComboBox()
         Me.ComboBoxXAxis = New System.Windows.Forms.ComboBox()
@@ -61,7 +62,6 @@ Partial Class FormMain
         Me.CheckBoxFFT = New System.Windows.Forms.CheckBox()
         Me.CheckBoxWaveForm = New System.Windows.Forms.CheckBox()
         Me.CheckBoxFlipX = New System.Windows.Forms.CheckBox()
-        Me.SimpleTrackBarPlayProgress = New SoftScope.SimpleTrackBar()
         Me.PanelOptions.SuspendLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -114,6 +114,19 @@ Partial Class FormMain
         Me.PanelOptions.Size = New System.Drawing.Size(168, 729)
         Me.PanelOptions.TabIndex = 0
         Me.PanelOptions.Visible = False
+        '
+        'SimpleTrackBarPlayProgress
+        '
+        Me.SimpleTrackBarPlayProgress.Cursor = System.Windows.Forms.Cursors.Hand
+        Me.SimpleTrackBarPlayProgress.ForeColor = System.Drawing.Color.DeepSkyBlue
+        Me.SimpleTrackBarPlayProgress.Location = New System.Drawing.Point(51, 707)
+        Me.SimpleTrackBarPlayProgress.Max = 100
+        Me.SimpleTrackBarPlayProgress.Min = 0
+        Me.SimpleTrackBarPlayProgress.Name = "SimpleTrackBarPlayProgress"
+        Me.SimpleTrackBarPlayProgress.ReadOnly = False
+        Me.SimpleTrackBarPlayProgress.Size = New System.Drawing.Size(66, 4)
+        Me.SimpleTrackBarPlayProgress.TabIndex = 1
+        Me.SimpleTrackBarPlayProgress.Value = 50
         '
         'ButtonPlayFile
         '
@@ -531,19 +544,6 @@ Partial Class FormMain
         Me.CheckBoxFlipX.Text = "Flip X"
         Me.CheckBoxFlipX.UseMnemonic = False
         Me.CheckBoxFlipX.UseVisualStyleBackColor = True
-        '
-        'SimpleTrackBarPlayProgress
-        '
-        Me.SimpleTrackBarPlayProgress.Cursor = System.Windows.Forms.Cursors.Hand
-        Me.SimpleTrackBarPlayProgress.ForeColor = System.Drawing.Color.DeepSkyBlue
-        Me.SimpleTrackBarPlayProgress.Location = New System.Drawing.Point(51, 707)
-        Me.SimpleTrackBarPlayProgress.Max = 100
-        Me.SimpleTrackBarPlayProgress.Min = 0
-        Me.SimpleTrackBarPlayProgress.Name = "SimpleTrackBarPlayProgress"
-        Me.SimpleTrackBarPlayProgress.ReadOnly = False
-        Me.SimpleTrackBarPlayProgress.Size = New System.Drawing.Size(66, 4)
-        Me.SimpleTrackBarPlayProgress.TabIndex = 1
-        Me.SimpleTrackBarPlayProgress.Value = 50
         '
         'FormMain
         '

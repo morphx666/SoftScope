@@ -8,6 +8,7 @@
 
     Private brushColor As Brush
     Private isLeftMouseButtonDown As Boolean
+    Private ctrlCursor As Cursor
 
     Public Event ValueChanged(sender As Object, e As EventArgs)
     Public Event ValueChangedFromMouseClick(sender As Object, e As EventArgs)
@@ -33,7 +34,16 @@
             Return mReadOnly
         End Get
         Set(value As Boolean)
-            mReadOnly = value
+            If mReadOnly <> value Then
+                mReadOnly = value
+
+                If mReadOnly Then
+                    ctrlCursor = Me.Cursor
+                    Me.Cursor = Cursors.Default
+                ElseIf ctrlCursor IsNot Nothing Then
+                    Me.Cursor = ctrlCursor
+                End If
+            End If
         End Set
     End Property
 

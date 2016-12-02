@@ -6,6 +6,9 @@ Imports System.Xml.Linq
 ' <div>Icons made by <a href="http://www.flaticon.com/authors/madebyoliver" title="Madebyoliver">Madebyoliver</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
 
 Public Class FormMain
+    Private Const ToRad As Double = Math.PI / 180.0
+    Private Const ToDeg As Double = 180.0 / Math.PI
+
     Private Enum AxisAssignments
         Off = 0
         LeftChannel = 1
@@ -29,8 +32,6 @@ Public Class FormMain
     Private flipX As Boolean
     Private flipY As Boolean
 
-    Private gain As Double = 1.0
-
     Private pixel As Pixel
     Private pixels As New List(Of Pixel)
     Private pixelsCopy As New List(Of Pixel)
@@ -51,6 +52,8 @@ Public Class FormMain
     Private xMspd As Integer ' Milliseconds per division for xAxis = Standard
     Private xAxisDivision As Integer
     Private yAxis As AxisAssignments
+    Private drawGrid As Boolean
+    Private gridColor As Color
 
     'Private filterL As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
     'Private filterR As New FilterButterworth(11000, sampleRate, FilterButterworth.PassType.Lowpass, Math.Sqrt(2))
@@ -58,7 +61,8 @@ Public Class FormMain
     Private rayColor As Color
     Private rayGlowColor As Color
     Private rayAfterGlowColor As Color
-    Private rayBrightness As Double = 0.7
+    Private rayBrightness As Double  ' FIXME: This should be user customizable
+    Private gain As Double = 1.0 ' FIXME: This should be user customizable
 
     Private bufL() As Integer
     Private bufR() As Integer
@@ -143,6 +147,8 @@ Public Class FormMain
         End If
 
         If waveReader IsNot Nothing Then waveReader.Dispose()
+
+        SimpleTrackBarPlayProgress.ReadOnly = True
     End Sub
 
     Private Sub InitAudioSource()
@@ -433,6 +439,8 @@ Public Class FormMain
             pixelsCopy = pixels.ToList()
         End SyncLock
 
+        If drawGrid Then RenderGrid(g)
+
         ' FIXME: There should be a better solution to draw the ray when it's not moving
         If pixels.Count = 1 Then
             Using b As New SolidBrush(rayColor)
@@ -453,6 +461,30 @@ Public Class FormMain
         End Using
 
         lastPixels.Clear()
+    End Sub
+
+    Private Sub RenderGrid(g As Graphics)
+        Using p As New Pen(gridColor)
+            If xAxis = AxisAssignments.Standard Then
+
+                For x As Integer = 0 To Me.DisplayRectangle.Width Step Me.DisplayRectangle.Width / 10
+                    g.DrawLine(p, x, 0, x, Me.DisplayRectangle.Height)
+                Next
+
+                For y As Integer = 0 To Me.DisplayRectangle.Height Step Me.DisplayRectangle.Height / 10
+                    g.DrawLine(p, 0, y, Me.DisplayRectangle.Width, y)
+                Next
+            Else
+                Dim center As Point = New Point(Me.DisplayRectangle.Width / 2, Me.DisplayRectangle.Height / 2)
+                Dim radius As Integer = Math.Min(Me.DisplayRectangle.Width, Me.DisplayRectangle.Height) / 2
+
+                Dim s As Integer = 360 / 24
+                For a As Integer = 0 To 360 - s Step s
+                    g.DrawLine(p, center, New Point(center.X + radius * Math.Cos(-a * ToRad), center.Y + radius * Math.Sin(a * ToRad)))
+                Next
+                g.DrawEllipse(p, center.X - radius, center.Y - radius, radius * 2, radius * 2)
+            End If
+        End Using
     End Sub
 
     Private Sub RenderLine(g As Graphics, p1 As Pixel, p2 As Pixel, Optional alphaMultiplier As Double = 1.0, Optional glowWidth As Single = 6.0, Optional rayWidth As Single = 1.0)
@@ -511,6 +543,10 @@ Public Class FormMain
                                       <rayColor><%= PanelRayColor.BackColor.ToArgb() %></rayColor>
                                       <leftChannelColor><%= PanelLeftChannel.BackColor.ToArgb() %></leftChannelColor>
                                       <rightChannelColor><%= PanelRightChannel.BackColor.ToArgb() %></rightChannelColor>
+                                      <drawGrid><%= drawGrid %></drawGrid>
+                                      <rayBrightness><%= rayBrightness %></rayBrightness>
+                                      <gain><%= gain %></gain>
+                                      <gridColor><%= gridColor.ToArgb() %></gridColor>
                                   </apperance>
                                   <audioSource>
                                       <deviceIndex><%= ComboBoxAudioDevices.SelectedIndex %></deviceIndex>
@@ -539,21 +575,32 @@ Public Class FormMain
         xAxis = AxisAssignments.LeftChannel
         yAxis = AxisAssignments.RightChannel
         xMspd = 100 ' 100ms per division
+
+        rayBrightness = 0.7
+        gain = 1.0
+        drawGrid = False
+        gridColor = Color.FromArgb(128, Color.DimGray)
         ' -----------------------------------------------------
 
         If File.Exists(SettingsFile) Then
+            Dim i As Integer
+            Dim d As Double
+            Dim b As Boolean
+            Dim axis As AxisAssignments
+            Dim ws As FormWindowState
+
             Dim xml As XElement = XDocument.Load(SettingsFile).<settings>(0)
 
-            Integer.TryParse(xml.<mainWindow>.<left>.Value, Me.Left)
-            Integer.TryParse(xml.<mainWindow>.<top>.Value, Me.Top)
-            Integer.TryParse(xml.<mainWindow>.<width>.Value, Me.Width)
-            Integer.TryParse(xml.<mainWindow>.<height>.Value, Me.Height)
+            If Integer.TryParse(xml.<mainWindow>.<left>.Value, i) Then Me.Left = i
+            If Integer.TryParse(xml.<mainWindow>.<top>.Value, i) Then Me.Top = i
+            If Integer.TryParse(xml.<mainWindow>.<width>.Value, i) Then Me.Width = i
+            If Integer.TryParse(xml.<mainWindow>.<height>.Value, i) Then Me.Height = i
             mainWindowBounds = Me.Bounds
-            [Enum].TryParse(Of FormWindowState)(xml.<mainWindow>.<state>.Value, Me.WindowState)
+            If [Enum].TryParse(Of FormWindowState)(xml.<mainWindow>.<state>.Value, ws) Then Me.WindowState = ws
 
-            Boolean.TryParse(xml.<processOptions>.<flipX>.Value, CheckBoxFlipX.Checked)
-            Boolean.TryParse(xml.<processOptions>.<flipY>.Value, CheckBoxFlipY.Checked)
-            Boolean.TryParse(xml.<processOptions>.<flipXY>.Value, CheckBoxFlipXY.Checked)
+            If Boolean.TryParse(xml.<processOptions>.<flipX>.Value, b) Then CheckBoxFlipX.Checked = b
+            If Boolean.TryParse(xml.<processOptions>.<flipY>.Value, b) Then CheckBoxFlipY.Checked = b
+            If Boolean.TryParse(xml.<processOptions>.<flipXY>.Value, b) Then CheckBoxFlipXY.Checked = b
 
             Dim SetPanelColor = Sub(panel As Panel, value As String)
                                     Dim argb As Integer
@@ -564,15 +611,18 @@ Public Class FormMain
             SetPanelColor(PanelRayColor, xml.<apperance>.<rayColor>.Value)
             SetPanelColor(PanelLeftChannel, xml.<apperance>.<leftChannelColor>.Value)
             SetPanelColor(PanelRightChannel, xml.<apperance>.<rightChannelColor>.Value)
+            Boolean.TryParse(xml.<apperance>.<drawGrid>.Value, drawGrid)
+            If Double.TryParse(xml.<apperance>.<rayBrightness>.Value, d) Then rayBrightness = d
+            If Double.TryParse(xml.<apperance>.<gain>.Value, d) Then gain = d
+            If Integer.TryParse(xml.<apperance>.<gridColor>.Value, i) Then gridColor = Color.FromArgb(i)
 
-            Integer.TryParse(xml.<audioSource>.<deviceIndex>.Value, ComboBoxAudioDevices.SelectedIndex)
+            If Integer.TryParse(xml.<audioSource>.<deviceIndex>.Value, i) Then ComboBoxAudioDevices.SelectedIndex = i
 
-            Dim axis As AxisAssignments
             If [Enum].TryParse(Of AxisAssignments)(xml.<axisAssignments>.<x>.<assignment>.Value, axis) Then xAxis = axis
             If [Enum].TryParse(Of AxisAssignments)(xml.<axisAssignments>.<y>.<assignment>.Value, axis) Then yAxis = axis
 
-            Boolean.TryParse(xml.<panels>.<wave>.Value, CheckBoxWaveForm.Checked)
-            Boolean.TryParse(xml.<panels>.<fft>.Value, CheckBoxFFT.Checked)
+            If Boolean.TryParse(xml.<panels>.<wave>.Value, b) Then CheckBoxWaveForm.Checked = b
+            If Boolean.TryParse(xml.<panels>.<fft>.Value, b) Then CheckBoxFFT.Checked = b
         Else
             ComboBoxAudioDevices.SelectedIndex = 0
 
@@ -584,6 +634,7 @@ Public Class FormMain
         ComboBoxYAxis.SelectedItem = yAxis
         LabelMsPerDiv.Text = xMspd.ToString()
         SimpleTrackBarPlayProgress.Value = 0
+        SimpleTrackBarPlayProgress.ReadOnly = True
 
         SetRayColors()
     End Sub
@@ -619,7 +670,6 @@ Public Class FormMain
 
         Dim lastPosWidth As Integer = 0
 
-        ' FIXME: This should be user customizable
         gain = 0.5
 
         Dim wp As New CustomWaveProvider(waveReader, bufferLength)
@@ -640,14 +690,12 @@ Public Class FormMain
         Do
             numBuf += 1
             outBufLen = waveReader.WaveFormat.ConvertLatencyToByteSize(desiredLatency + numBuf - 1) / numBuf
-            Debug.WriteLine(bufferLength - outBufLen)
         Loop While bufferLength * stp < outBufLen
 
         audioOut = New WaveOut(WaveCallbackInfo.FunctionCallback())
         AddHandler audioOut.PlaybackStopped, Sub()
                                                  gain = 1.0
                                                  StopAudioDevice()
-                                                 waveReader.Dispose()
                                                  Me.Invoke(New MethodInvoker(Sub() SimpleTrackBarPlayProgress.Value = 0))
                                                  If Not abortThreads Then InitAudioSource()
                                              End Sub
@@ -656,6 +704,11 @@ Public Class FormMain
         audioOut.Init(wp)
         audioOut.Play()
 
+        ' FIXME: Need to find out why playback freezes the whole program. The DoEvents statements seem to help.
         Application.DoEvents()
+        Application.DoEvents()
+        Application.DoEvents()
+
+        SimpleTrackBarPlayProgress.ReadOnly = False
     End Sub
 End Class
