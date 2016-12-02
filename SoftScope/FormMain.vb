@@ -616,8 +616,8 @@ Public Class FormMain
         AddHandler wp.DataAvailable, Sub(b() As Byte) ProcessAudio(Me, New WaveInEventArgs(b, b.Length))
 
         ' FIXME: There has to be a better solution
-        ' Find the number of buffers for the waveOutDevice, so that internal WaveOut buffer is as closest to bufferLength * stp as possible
-        Dim desiredLatency As Integer = 300 ' WavOut default. See https://github.com/naudio/NAudio/blob/master/NAudio/Wave/WaveOutputs/WaveOut.cs#L102
+        ' Find the number of buffers for the waveOutDevice, so that internal WaveOut buffer is as close to bufferLength * stp as possible
+        Dim desiredLatency As Integer = 300 ' WaveOut default. See https://github.com/naudio/NAudio/blob/master/NAudio/Wave/WaveOutputs/WaveOut.cs#L102
         Dim outBufLen As Integer
         Dim numBuf As Integer = 0
         Do
