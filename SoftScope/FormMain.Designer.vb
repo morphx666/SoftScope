@@ -43,7 +43,9 @@ Partial Class FormMain
         Me.LabelAudioFormat = New System.Windows.Forms.Label()
         Me.LabelAudioSource = New System.Windows.Forms.Label()
         Me.LabelYAxis = New System.Windows.Forms.Label()
+        Me.LabelMsPerDiv = New System.Windows.Forms.Label()
         Me.LabelXAxis = New System.Windows.Forms.Label()
+        Me.Label14 = New System.Windows.Forms.Label()
         Me.Label12 = New System.Windows.Forms.Label()
         Me.Label11 = New System.Windows.Forms.Label()
         Me.Label3 = New System.Windows.Forms.Label()
@@ -57,12 +59,8 @@ Partial Class FormMain
         Me.CheckBoxFFT = New System.Windows.Forms.CheckBox()
         Me.CheckBoxWaveForm = New System.Windows.Forms.CheckBox()
         Me.CheckBoxFlipX = New System.Windows.Forms.CheckBox()
-        Me.TrackBarMsPerDiv = New System.Windows.Forms.TrackBar()
-        Me.Label14 = New System.Windows.Forms.Label()
-        Me.LabelMsPerDiv = New System.Windows.Forms.Label()
         Me.PanelOptions.SuspendLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
-        CType(Me.TrackBarMsPerDiv, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'PanelOptions
@@ -70,7 +68,6 @@ Partial Class FormMain
         Me.PanelOptions.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
             Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.PanelOptions.BackColor = System.Drawing.Color.FromArgb(CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer), CType(CType(33, Byte), Integer))
-        Me.PanelOptions.Controls.Add(Me.TrackBarMsPerDiv)
         Me.PanelOptions.Controls.Add(Me.ComboBoxYAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxXAxis)
         Me.PanelOptions.Controls.Add(Me.ComboBoxAudioDevices)
@@ -318,6 +315,19 @@ Partial Class FormMain
         Me.LabelYAxis.Text = "Right Channel"
         Me.LabelYAxis.UseMnemonic = False
         '
+        'LabelMsPerDiv
+        '
+        Me.LabelMsPerDiv.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.LabelMsPerDiv.Location = New System.Drawing.Point(75, 577)
+        Me.LabelMsPerDiv.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.LabelMsPerDiv.Name = "LabelMsPerDiv"
+        Me.LabelMsPerDiv.Size = New System.Drawing.Size(88, 15)
+        Me.LabelMsPerDiv.TabIndex = 2
+        Me.LabelMsPerDiv.Text = "1000"
+        Me.LabelMsPerDiv.TextAlign = System.Drawing.ContentAlignment.MiddleRight
+        Me.LabelMsPerDiv.UseMnemonic = False
+        '
         'LabelXAxis
         '
         Me.LabelXAxis.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
@@ -329,6 +339,17 @@ Partial Class FormMain
         Me.LabelXAxis.TabIndex = 2
         Me.LabelXAxis.Text = "Left Channel"
         Me.LabelXAxis.UseMnemonic = False
+        '
+        'Label14
+        '
+        Me.Label14.AutoSize = True
+        Me.Label14.Location = New System.Drawing.Point(18, 577)
+        Me.Label14.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
+        Me.Label14.Name = "Label14"
+        Me.Label14.Size = New System.Drawing.Size(45, 15)
+        Me.Label14.TabIndex = 2
+        Me.Label14.Text = "Ms/Div"
+        Me.Label14.UseMnemonic = False
         '
         'Label12
         '
@@ -483,45 +504,6 @@ Partial Class FormMain
         Me.CheckBoxFlipX.UseMnemonic = False
         Me.CheckBoxFlipX.UseVisualStyleBackColor = True
         '
-        'TrackBarMsPerDiv
-        '
-        Me.TrackBarMsPerDiv.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
-            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.TrackBarMsPerDiv.AutoSize = False
-        Me.TrackBarMsPerDiv.LargeChange = 100
-        Me.TrackBarMsPerDiv.Location = New System.Drawing.Point(72, 577)
-        Me.TrackBarMsPerDiv.Maximum = 1000
-        Me.TrackBarMsPerDiv.Minimum = 10
-        Me.TrackBarMsPerDiv.Name = "TrackBarMsPerDiv"
-        Me.TrackBarMsPerDiv.Size = New System.Drawing.Size(65, 18)
-        Me.TrackBarMsPerDiv.SmallChange = 10
-        Me.TrackBarMsPerDiv.TabIndex = 9
-        Me.TrackBarMsPerDiv.TickFrequency = 100
-        Me.TrackBarMsPerDiv.Value = 100
-        '
-        'Label14
-        '
-        Me.Label14.AutoSize = True
-        Me.Label14.Location = New System.Drawing.Point(18, 577)
-        Me.Label14.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
-        Me.Label14.Name = "Label14"
-        Me.Label14.Size = New System.Drawing.Size(45, 15)
-        Me.Label14.TabIndex = 2
-        Me.Label14.Text = "Ms/Div"
-        Me.Label14.UseMnemonic = False
-        '
-        'LabelMsPerDiv
-        '
-        Me.LabelMsPerDiv.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.LabelMsPerDiv.Location = New System.Drawing.Point(133, 577)
-        Me.LabelMsPerDiv.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
-        Me.LabelMsPerDiv.Name = "LabelMsPerDiv"
-        Me.LabelMsPerDiv.Size = New System.Drawing.Size(32, 15)
-        Me.LabelMsPerDiv.TabIndex = 2
-        Me.LabelMsPerDiv.Text = "1000"
-        Me.LabelMsPerDiv.TextAlign = System.Drawing.ContentAlignment.MiddleRight
-        Me.LabelMsPerDiv.UseMnemonic = False
-        '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(7.0!, 15.0!)
@@ -538,7 +520,6 @@ Partial Class FormMain
         Me.PanelOptions.ResumeLayout(False)
         Me.PanelOptions.PerformLayout()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).EndInit()
-        CType(Me.TrackBarMsPerDiv, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
@@ -577,7 +558,6 @@ Partial Class FormMain
     Friend WithEvents Label10 As Label
     Friend WithEvents Label12 As Label
     Friend WithEvents Label11 As Label
-    Friend WithEvents TrackBarMsPerDiv As TrackBar
     Friend WithEvents Label14 As Label
     Friend WithEvents LabelMsPerDiv As Label
 End Class

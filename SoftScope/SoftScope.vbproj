@@ -96,6 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Ckasses\FFT.vb" />
+    <Compile Include="Ckasses\WaveHelper.vb" />
     <Compile Include="FFTSupport.vb">
       <SubType>Form</SubType>
     </Compile>

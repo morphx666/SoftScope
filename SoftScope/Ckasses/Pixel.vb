@@ -1,7 +1,12 @@
-﻿Public Structure Pixel
+﻿Public Class Pixel
+    Implements ICloneable
+
     Public Property X As Integer
     Public Property Y As Integer
     Private mAlpha As Integer
+
+    Public Sub New()
+    End Sub
 
     Public Sub New(x As Integer, y As Integer)
         Me.New()
@@ -53,4 +58,8 @@
     Public Shared Widening Operator CType(p As Point) As Pixel
         Return New Pixel(p.X, p.Y)
     End Operator
-End Structure
+
+    Public Function Clone() As Object Implements ICloneable.Clone
+        Return New Pixel(X, Y, Alpha)
+    End Function
+End Class

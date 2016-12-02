@@ -11,8 +11,6 @@ Public Class FormMain
         Standard = 3
     End Enum
 
-    Private Const ToDeg As Double = 180.0 / Math.PI
-
     Private audioSource As WaveIn
 
     Private screenWidthHalf As Double
@@ -27,16 +25,17 @@ Public Class FormMain
     Private flipX As Boolean
     Private flipY As Boolean
 
-    Private pixel As New Pixel()
+    Private pixel As Pixel
     Private pixels As New List(Of Pixel)
-    Private pixelExactComparer As New PixelComparerExact()
+    Private pixelsCopy As New List(Of Pixel)
+    Private lastPixels As New List(Of Pixel)
     Private pixelSimilarComparer As New PixelComparerSimilar(4)
 
     Private sampleRate As Integer
     Private channels As Integer
     Private bitDepth As Integer
     Private dataSize As Integer
-    Private Const bufferMilliseconds As Integer = 25
+    Private bufferMilliseconds As Integer
     Private stp As Integer
     Private maxNormValue As Integer
     Private tmpB() As Byte
@@ -53,6 +52,7 @@ Public Class FormMain
     Private rayColor As Color
     Private rayGlowColor As Color
     Private rayAfterGlowColor As Color
+    Private rayBrightness As Double = 0.7
 
     Private bufL() As Integer
     Private bufR() As Integer
@@ -62,8 +62,6 @@ Public Class FormMain
 
     Private renderAudioWaveForm As Boolean = False
     Private renderAudioFFT As Boolean = False
-
-    Private lastPoints As New List(Of Pixel)
 
     Private abortThreads As Boolean
 
@@ -102,6 +100,9 @@ Public Class FormMain
         renderer.Start()
 
         LoadSettings()
+
+        'PlayFromFile("youscope.wav")
+        'PlayFromFile("kickstarter192khz.wav")
     End Sub
 
     Private Sub SetWindowParams()
@@ -182,9 +183,23 @@ Public Class FormMain
         LabelAudioFormat.Text = $"{sampleRate / 1000:F3} KHz {If(channels = "1", "Mono", "Stereo")} {bitDepth} bits"
         LabelAudioFormat.ForeColor = If(channels = 1, Color.OrangeRed, Me.ForeColor)
 
+        SetupBuffers()
+
+        audioSource.WaveFormat = New WaveFormat(sampleRate, bitDepth, channels)
+        audioSource.BufferMilliseconds = bufferMilliseconds
+        AddHandler audioSource.DataAvailable, AddressOf ProcessAudio
+        audioSource.StartRecording()
+
+        SetWindowParams()
+        ComboBoxAudioDevices.Visible = False
+    End Sub
+
+    Private Sub SetupBuffers()
         dataSize = bitDepth / 8
         stp = channels * dataSize
         maxNormValue = 2 ^ bitDepth
+
+        bufferMilliseconds = (sampleRate / 2) / 1000
 
         ReDim tmpB(dataSize + (dataSize Mod 2) - 1)
         ReDim bufL(sampleRate * bufferMilliseconds / 1000 - 1)
@@ -200,14 +215,6 @@ Public Class FormMain
         fftWindowSum = FFT.GetWindowSum(fftSize, FFTWindowConstants.Hanning)
         fftWavInIndex = 0
         bufIndex = 0
-
-        audioSource.WaveFormat = New WaveFormat(sampleRate, bitDepth, channels)
-        audioSource.BufferMilliseconds = bufferMilliseconds
-        AddHandler audioSource.DataAvailable, AddressOf ProcessAudio
-        audioSource.StartRecording()
-
-        SetWindowParams()
-        ComboBoxAudioDevices.Visible = False
     End Sub
 
     Private Sub SetupComboBoxes()
@@ -244,10 +251,6 @@ Public Class FormMain
                                                            LabelXAxis.Text = xAxis.ToString()
                                                            ComboBoxXAxis.Visible = False
                                                        End Sub
-        AddHandler TrackBarMsPerDiv.ValueChanged, Sub()
-                                                      xMspd = TrackBarMsPerDiv.Value
-                                                      LabelMsPerDiv.Text = TrackBarMsPerDiv.Value.ToString()
-                                                  End Sub
 
         AddHandler LabelYAxis.MouseEnter, Sub() ComboBoxYAxis.Visible = True
         AddHandler ComboBoxYAxis.MouseLeave, Sub() ComboBoxYAxis.Visible = False
@@ -291,10 +294,12 @@ Public Class FormMain
                                                 ChangeColor(PanelRightChannel)
                                                 rightChannelColor = PanelRightChannel.BackColor
                                             End Sub
+
+        ' FIXME: Cheap trick to "fix" panel rendering issue, likely caused by the AllPaintingInWmPaint flag
+        AddHandler PanelOptions.MouseMove, Sub() If PanelOptions.Visible Then PanelOptions.Refresh()
     End Sub
 
     Private Sub ProcessAudio(sender As Object, e As WaveInEventArgs)
-        Dim tmp As Integer
         Dim i As Integer
 
         bufIndex = 0
@@ -321,47 +326,55 @@ Public Class FormMain
                         bufR(i / stp) = BitConverter.ToInt32(tmpB, 0)
                 End Select
 
-                'filterL.Update(normL)
-                'normL = filterL.Value
-
-                'filterR.Update(normR)
-                'normR = filterR.Value
-
-                Select Case xAxis
-                    Case AxisAssignments.Off : pixel.X = 0
-                    Case AxisAssignments.LeftChannel : pixel.X = bufL(i / stp) * widthFactor
-                    Case AxisAssignments.RightChannel : pixel.X = -bufR(i / stp) * heightFactor
-                    Case AxisAssignments.Standard
-                        pixel.X += xAxisDivision / xMspd
-                        pixel.X = pixel.X Mod Me.DisplayRectangle.Width
-                End Select
-                Select Case yAxis
-                    Case AxisAssignments.Off : pixel.Y = 0
-                    Case AxisAssignments.LeftChannel : pixel.Y = bufL(i / stp) * widthFactor
-                    Case AxisAssignments.RightChannel : pixel.Y = -bufR(i / stp) * heightFactor
-                End Select
-
-                If flipX Then pixel.X = -pixel.X
-                If flipY Then pixel.Y = -pixel.Y
-
-                If flipXY Then
-                    tmp = pixel.X
-                    pixel.X = pixel.Y
-                    pixel.Y = tmp
-                End If
-
-                If xAxis <> AxisAssignments.Standard Then pixel.X += screenWidthHalf
-                pixel.Y += screenHeightHalf
-
-                If pixels.BinarySearch(pixel, pixelSimilarComparer) < 0 Then pixels.Add(pixel)
+                ProcessBuffer(i)
             Next
 
-            If renderAudioFFT Then
-                Do
-                    FillFFTBuffer()
-                Loop Until fftWavInIndex = 0 OrElse bufIndex = 0
-            End If
+            FillFFTBuffer()
         End SyncLock
+    End Sub
+
+    Private Sub ProcessBuffer(i As Integer)
+        Dim tmp As Integer
+
+        'filterL.Update(normL)
+        'normL = filterL.Value
+
+        'filterR.Update(normR)
+        'normR = filterR.Value
+
+        Select Case xAxis
+            Case AxisAssignments.Off : pixel.X = 0
+            Case AxisAssignments.LeftChannel : pixel.X = bufL(i / stp) * widthFactor
+            Case AxisAssignments.RightChannel : pixel.X = -bufR(i / stp) * heightFactor
+            Case AxisAssignments.Standard
+                pixel.X += xAxisDivision / xMspd
+                pixel.X = pixel.X Mod Me.DisplayRectangle.Width
+        End Select
+        Select Case yAxis
+            Case AxisAssignments.Off : pixel.Y = 0
+            Case AxisAssignments.LeftChannel : pixel.Y = bufL(i / stp) * widthFactor
+            Case AxisAssignments.RightChannel : pixel.Y = -bufR(i / stp) * heightFactor
+        End Select
+
+        ' FIXME: The FlipX and FlipXY options don't work correctly when X axis is set to "Standard"
+        If flipX Then pixel.X = -pixel.X
+        If flipY Then pixel.Y = -pixel.Y
+
+        If flipXY Then
+            tmp = pixel.X
+            pixel.X = pixel.Y
+            pixel.Y = tmp
+        End If
+
+        If xAxis <> AxisAssignments.Standard Then pixel.X += screenWidthHalf
+        pixel.Y += screenHeightHalf
+
+        Dim index As Integer = pixels.BinarySearch(pixel, pixelSimilarComparer)
+        If index < 0 Then
+            pixels.Add(pixel.Clone())
+        Else
+            pixels(index).Alpha += 96
+        End If
     End Sub
 
     Protected Overrides Sub OnPaintBackground(e As PaintEventArgs)
@@ -370,61 +383,27 @@ Public Class FormMain
 
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
         Dim g As Graphics = e.Graphics
+        'Dim i As Integer
 
-        Dim pixelsCopy As List(Of Pixel)
+        '' Render after glow
+        'g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+        'For i = 0 To pixelsCopy.Count - 2
+        '    RenderLine(g, pixelsCopy(i), pixelsCopy(i + 1), 0.2, 12.0, 0.0)
+        'Next
+
         SyncLock pixels
             pixelsCopy = pixels.ToList()
         End SyncLock
 
-        Dim len As Integer = pixelsCopy.Count - 2
-        Dim i As Integer
-        'Dim j As Integer
-
-        Dim pA1 As Pixel
-        Dim pA2 As Pixel
-        Dim A12 As Double
-
-        'Dim pB1 As Pixel
-        'Dim pB2 As Pixel
-        'Dim B12 As Double
-
-        'g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-        'For i = 0 To lastPoints.Count - 2 Step 1
-        '    RenderLine(g, lastPoints(i), lastPoints(i + 1))
-        'Next
-
+        ' FIXME: There should be a better solution to draw the ray when it's not moving
         If pixels.Count = 1 Then
             Using b As New SolidBrush(rayColor)
                 g.FillEllipse(b, New Rectangle(pixels(0), New Size(2, 2)))
             End Using
         End If
 
-        For i = 0 To len
-            pA1 = pixelsCopy(i)
-            pA2 = pixelsCopy(i + 1)
-
-            If pA1 = pA2 AndAlso i < len Then Continue For
-
-            A12 = Math.Atan2(pA1.Y - pA2.Y, pA1.X - pA2.X) * ToDeg Mod 180.0
-            If A12 < 0 Then A12 = 360.0 - A12
-
-            ' Unfortunately, this optimization causes too many issues
-            '' Skip line segments with the same slope and treat them as a single line
-            'For j = i + 1 To len
-            '    pB1 = pixelsCopy(j)
-            '    pB2 = pixelsCopy(j + 1)
-            '    If pB1 = pB2 Then Continue For
-
-            '    B12 = Math.Atan2(pB1.Y - pB2.Y, pB1.X - pB2.X) * ToDeg Mod 180.0
-            '    If B12 < 0 Then B12 = 360.0 - B12
-
-            '    If A12 <> B12 Then
-            '        RenderLine(g, pA1, pB2)
-            '        Exit For
-            '    End If
-            'Next
-            'If j > len Then RenderLine(g, pA1, pB2)
-            RenderLine(g, pA1, pA2)
+        For i = 0 To pixelsCopy.Count - 2
+            RenderLine(g, pixelsCopy(i), pixelsCopy(i + 1))
         Next
 
         g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
@@ -435,31 +414,34 @@ Public Class FormMain
             End Using
         End Using
 
-        lastPoints.Clear()
+        lastPixels.Clear()
     End Sub
 
-    Private Sub RenderLine(g As Graphics, p1 As Pixel, p2 As Pixel)
-        Dim pixelIndex As Integer = lastPoints.BinarySearch(p1, pixelSimilarComparer)
-        If pixelIndex < 0 Then
-            p1.Alpha = 128
-        Else
-            p1.Alpha = lastPoints(pixelIndex).Alpha + 96
-        End If
-        p1.Alpha -= 30 * Distance(p1, p2) / screenDiagonal * 255
-        p2.Alpha = p1.Alpha
+    Private Sub RenderLine(g As Graphics, p1 As Pixel, p2 As Pixel, Optional alphaMultiplier As Double = 1.0, Optional glowWidth As Single = 6.0, Optional rayWidth As Single = 1.0)
+        'Dim pixelIndex As Integer = lastPixels.BinarySearch(p1, pixelSimilarComparer)
+        'If pixelIndex >= 0 Then
+        '    p1.Alpha += 32
+        'Else
+        '    p1.Alpha -= 8
+        'End If
+        p1.Alpha *= alphaMultiplier
+        p1.Alpha -= (1.0 - rayBrightness) * 150 * Distance(p1, p2) / screenDiagonal * 255
+        'p2.Alpha = p1.Alpha
 
         g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-        Using p As New Pen(Color.FromArgb(p1.Alpha / 1.5, rayGlowColor), 6)
+        Using p As New Pen(Color.FromArgb(p1.Alpha / 1.5, rayGlowColor), glowWidth)
             g.DrawLine(p, p1, p2)
         End Using
 
-        g.SmoothingMode = Drawing2D.SmoothingMode.None
-        Using p As New Pen(Color.FromArgb(p1.Alpha, rayColor), 1)
-            g.DrawLine(p, p1, p2)
-        End Using
+        If rayWidth > 0 Then
+            g.SmoothingMode = Drawing2D.SmoothingMode.None
+            Using p As New Pen(Color.FromArgb(p1.Alpha, rayColor), rayWidth)
+                g.DrawLine(p, p1, p2)
+            End Using
+        End If
 
-        lastPoints.Add(p1)
-        lastPoints.Add(p2)
+        'lastPixels.Add(p1)
+        'lastPixels.Add(p2)
     End Sub
 
     Private Function Distance(p1 As Pixel, p2 As Pixel) As Double
@@ -531,9 +513,9 @@ Public Class FormMain
             mainWindowBounds = Me.Bounds
             [Enum].TryParse(Of FormWindowState)(xml.<mainWindow>.<state>.Value, Me.WindowState)
 
-            Boolean.TryParse(xml.<processOptions>.<flipX>.Value, flipX)
-            Boolean.TryParse(xml.<processOptions>.<flipY>.Value, flipY)
-            Boolean.TryParse(xml.<processOptions>.<flipXY>.Value, flipXY)
+            Boolean.TryParse(xml.<processOptions>.<flipX>.Value, CheckBoxFlipX.Checked)
+            Boolean.TryParse(xml.<processOptions>.<flipY>.Value, CheckBoxFlipY.Checked)
+            Boolean.TryParse(xml.<processOptions>.<flipXY>.Value, CheckBoxFlipXY.Checked)
 
             Dim SetPanelColor = Sub(panel As Panel, value As String)
                                     Dim argb As Integer
@@ -562,7 +544,6 @@ Public Class FormMain
 
         ComboBoxXAxis.SelectedItem = xAxis
         ComboBoxYAxis.SelectedItem = yAxis
-        TrackBarMsPerDiv.Value = xMspd
         LabelMsPerDiv.Text = xMspd.ToString()
 
         SetRayColors()
@@ -576,6 +557,8 @@ Public Class FormMain
         rayGlowColor = hls.Color
         hls.DarkenColor(0.5)
         rayAfterGlowColor = hls.Color
+
+        pixel = New Pixel(0, 0, 128)
     End Sub
 
     Private ReadOnly Property SettingsFile As String
@@ -584,4 +567,72 @@ Public Class FormMain
             Return IO.Path.Combine(fp.Parent.FullName, "settings.dat")
         End Get
     End Property
+
+    Private Sub PlayFromFile(fileName As String)
+        Dim l() As Single
+        Dim r() As Single
+        If Not WaveHelper.Read(fileName, l, r, sampleRate, channels, bitDepth) Then
+            MsgBox("Invalid WAV file", MsgBoxStyle.Exclamation)
+            Exit Sub
+        End If
+
+        audioSource.StopRecording()
+        SetupBuffers()
+
+        Dim gain As Double = 0.5
+        For i As Integer = 0 To l.Length - 1
+            l(i) *= 32767 * gain
+            r(i) *= 32767 * gain
+        Next
+
+        Dim t As New Thread(Sub()
+                                Dim j As Integer = 0
+                                Dim i As Integer
+                                Dim sw As New Stopwatch()
+
+                                Dim lastFlipX As Boolean = flipX
+                                Dim lastFlipY As Boolean = flipY
+                                Dim lastFlipXY As Boolean = flipXY
+                                Dim lastRayBrightness As Double = rayBrightness
+
+                                If fileName = "youscope.wav" Then
+                                    flipY = True
+                                    flipX = True
+                                    flipXY = True
+                                    rayBrightness = 0.75
+                                End If
+
+                                sw.Start()
+                                Do
+                                    SyncLock pixels
+                                        pixels.Clear()
+                                        For i = 0 To bufL.Length - 1
+                                            bufL(i) = l(j)
+                                            bufR(i) = r(j)
+
+                                            ProcessBuffer(i)
+
+                                            j += 1
+                                            If j >= l.Length Then Exit For
+                                        Next
+                                    End SyncLock
+
+                                    FillFFTBuffer()
+
+                                    Thread.Sleep(Math.Max(0, bufferMilliseconds - sw.ElapsedMilliseconds))
+                                    sw.Restart()
+                                Loop While j < l.Length AndAlso Not abortThreads
+
+                                flipX = lastFlipX
+                                flipY = lastFlipY
+                                flipXY = lastFlipXY
+                                rayBrightness = lastRayBrightness
+
+                                Debug.WriteLine("Done reading file...")
+
+                                If Not abortThreads Then InitAudioSource()
+                            End Sub)
+        t.IsBackground = True
+        t.Start()
+    End Sub
 End Class

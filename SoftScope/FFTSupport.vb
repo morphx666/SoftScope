@@ -68,22 +68,26 @@
     End Sub
 
     Private Sub FillFFTBuffer()
-        Do
-            If bufIndex >= bufL.Length Then
-                If fftWavInIndex >= fftSize Then fftWavInIndex = 0
-                bufIndex = 0
-                Exit Do
-            ElseIf fftWavInIndex >= fftSize Then
-                fftWavInIndex = 0
-                Exit Do
-            End If
+        If renderAudioFFT Then
+            Do
+                Do
+                    If bufIndex >= bufL.Length Then
+                        If fftWavInIndex >= fftSize Then fftWavInIndex = 0
+                        bufIndex = 0
+                        Exit Do
+                    ElseIf fftWavInIndex >= fftSize Then
+                        fftWavInIndex = 0
+                        Exit Do
+                    End If
 
-            fftWavInBufL(fftWavInIndex) = bufL(bufIndex) * fftWindowValues(fftWavInIndex)
-            fftWavInBufR(fftWavInIndex) = bufR(bufIndex) * fftWindowValues(fftWavInIndex)
+                    fftWavInBufL(fftWavInIndex) = bufL(bufIndex) * fftWindowValues(fftWavInIndex)
+                    fftWavInBufR(fftWavInIndex) = bufR(bufIndex) * fftWindowValues(fftWavInIndex)
 
-            fftWavInIndex += 1
-            bufIndex += 1
-        Loop
+                    fftWavInIndex += 1
+                    bufIndex += 1
+                Loop
+            Loop Until fftWavInIndex = 0 OrElse bufIndex = 0
+        End If
     End Sub
 
     Private Function FFT2Pts(x As Integer, r As Rectangle, channel As Integer, fftSize As FFTSizeConstants) As Size
