@@ -152,6 +152,8 @@ Public Class FormMain
     End Sub
 
     Private Sub InitAudioSource()
+        If ComboBoxAudioDevices.SelectedIndex = -1 Then Exit Sub
+
         StopAudioDevice()
 
         audioSource = New WaveIn()
@@ -246,6 +248,11 @@ Public Class FormMain
         For i As Integer = 0 To WaveIn.DeviceCount - 1
             ComboBoxAudioDevices.Items.Add(WaveIn.GetCapabilities(i).ProductName)
         Next
+        If ComboBoxAudioDevices.Items.Count = 0 Then
+            LabelAudioSource.Text = "No Devices Available"
+            LabelAudioSource.ForeColor = Color.DimGray
+            LabelAudioFormat.Visible = False
+        End If
 
         For Each v In [Enum].GetValues(GetType(AxisAssignments))
             ComboBoxXAxis.Items.Add(v)
@@ -265,7 +272,7 @@ Public Class FormMain
                                      End If
                                  End Sub
 
-        AddHandler LabelAudioSource.MouseEnter, Sub() If audioOut Is Nothing Then ComboBoxAudioDevices.Visible = True
+        AddHandler LabelAudioSource.MouseEnter, Sub() If audioOut Is Nothing AndAlso ComboBoxAudioDevices.Items.Count > 0 Then ComboBoxAudioDevices.Visible = True
         AddHandler ComboBoxAudioDevices.MouseLeave, Sub() ComboBoxAudioDevices.Visible = False
         AddHandler ComboBoxAudioDevices.SelectedIndexChanged, Sub() InitAudioSource()
 
@@ -373,7 +380,7 @@ Public Class FormMain
                 ProcessBuffer(bufferIndex)
             Next
 
-            FillFFTBuffer()
+            If renderAudioFFT Then FillFFTBuffer()
         End SyncLock
     End Sub
 
@@ -466,7 +473,6 @@ Public Class FormMain
     Private Sub RenderGrid(g As Graphics)
         Using p As New Pen(gridColor)
             If xAxis = AxisAssignments.Standard Then
-
                 For x As Integer = 0 To Me.DisplayRectangle.Width Step Me.DisplayRectangle.Width / 10
                     g.DrawLine(p, x, 0, x, Me.DisplayRectangle.Height)
                 Next
@@ -580,6 +586,10 @@ Public Class FormMain
         gain = 1.0
         drawGrid = False
         gridColor = Color.FromArgb(128, Color.DimGray)
+
+        sampleRate = 44100
+        channels = 2
+        bitDepth = 16
         ' -----------------------------------------------------
 
         If File.Exists(SettingsFile) Then
@@ -616,7 +626,15 @@ Public Class FormMain
             If Double.TryParse(xml.<apperance>.<gain>.Value, d) Then gain = d
             If Integer.TryParse(xml.<apperance>.<gridColor>.Value, i) Then gridColor = Color.FromArgb(i)
 
-            If Integer.TryParse(xml.<audioSource>.<deviceIndex>.Value, i) Then ComboBoxAudioDevices.SelectedIndex = i
+            If Integer.TryParse(xml.<audioSource>.<deviceIndex>.Value, i) AndAlso i >= 0 AndAlso i < ComboBoxAudioDevices.Items.Count Then
+                ComboBoxAudioDevices.SelectedIndex = i
+            Else
+                If ComboBoxAudioDevices.Items.Count > 0 Then
+                    ComboBoxAudioDevices.SelectedIndex = 0
+                Else
+                    SetupBuffers()
+                End If
+            End If
 
             If [Enum].TryParse(Of AxisAssignments)(xml.<axisAssignments>.<x>.<assignment>.Value, axis) Then xAxis = axis
             If [Enum].TryParse(Of AxisAssignments)(xml.<axisAssignments>.<y>.<assignment>.Value, axis) Then yAxis = axis
