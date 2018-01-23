@@ -309,7 +309,6 @@ Public Class FormMain
 
         AddHandler PanelBackColor.Click, Sub()
                                              ChangeColor(PanelBackColor)
-                                             Me.BackColor = PanelBackColor.BackColor
                                          End Sub
 
         AddHandler PanelRayColor.Click, Sub()
@@ -429,7 +428,7 @@ Public Class FormMain
     End Sub
 
     Protected Overrides Sub OnPaintBackground(e As PaintEventArgs)
-        ' Do nothing...
+        e.Graphics.Clear(PanelBackColor.BackColor)
     End Sub
 
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
