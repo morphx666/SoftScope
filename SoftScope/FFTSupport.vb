@@ -14,19 +14,7 @@
     Private fftWindowSum As Double
 
     Private Sub RenderFFT(g As Graphics, colorLeft As Pen, colorRight As Pen)
-        If fftWavDstIndex = 0 Then FFT.FourierTransform(fftSize, fftWavDstBufL, fftL, fftWavDstBufR, fftR, False)
-
-        For i As Integer = 0 To fftHistSize - 2
-            For j As Integer = 0 To fftSize2 - 1
-                fftLHist(i)(j) = fftLHist(i + 1)(j)
-                fftRHist(i)(j) = fftRHist(i + 1)(j)
-            Next
-        Next
-
-        For i As Integer = 0 To fftSize2 - 1
-            fftLHist(fftHistSize - 1)(i) = fftL(i).Power()
-            fftRHist(fftHistSize - 1)(i) = fftR(i).Power()
-        Next
+        RunFFT()
 
         Dim r As New Rectangle(0, 0, screenWidthHalf / 2, screenHeightHalf / 2)
         r.X = Me.DisplayRectangle.Width - r.Width - 8
@@ -65,6 +53,22 @@
         Using sb As New SolidBrush(Color.FromArgb(128, 33, 33, 33))
             g.FillRectangle(sb, r)
         End Using
+    End Sub
+
+    Public Sub RunFFT()
+        If fftWavDstIndex = 0 Then FFT.FourierTransform(fftSize, fftWavDstBufL, fftL, fftWavDstBufR, fftR, False)
+
+        For i As Integer = 0 To fftHistSize - 2
+            For j As Integer = 0 To fftSize2 - 1
+                fftLHist(i)(j) = fftLHist(i + 1)(j)
+                fftRHist(i)(j) = fftRHist(i + 1)(j)
+            Next
+        Next
+
+        For i As Integer = 0 To fftSize2 - 1
+            fftLHist(fftHistSize - 1)(i) = fftL(i).Power()
+            fftRHist(fftHistSize - 1)(i) = fftR(i).Power()
+        Next
     End Sub
 
     Private Sub FillFFTBuffer()
