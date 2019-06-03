@@ -28,16 +28,17 @@
         Dim v1 As Integer
         Dim v2 As Integer
         Dim hh As Integer = r.Height / 2
+        Dim hh2 As Integer = hh / 2
         Dim y As Integer
 
         If channel = 1 Then ' Left
             v1 = bufL(x) / maxNormValue * hh
             v2 = bufL(x + 1) / maxNormValue * hh
-            y = r.Y + hh / 2
+            y = r.Y + hh2
         Else                ' Right
             v1 = bufR(x) / maxNormValue * hh
             v2 = bufR(x + 1) / maxNormValue * hh
-            y = r.Bottom - hh / 2
+            y = r.Bottom - hh2
         End If
 
         ps(0) = New Point(r.X + x / bufferLength * r.Width, v1 + y)
