@@ -2,6 +2,7 @@ Imports System.Threading
 Imports System.IO
 Imports NAudio.Wave
 Imports System.Xml.Linq
+Imports System.Threading.Tasks
 
 ' <div>Icons made by <a href="http://www.flaticon.com/authors/madebyoliver" title="Madebyoliver">Madebyoliver</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
 
@@ -97,16 +98,14 @@ Public Class FormMain
                 ReDim fftRHist(i)(fftSize2 - 1)
             Next
 
-            Dim renderer As New Thread(Sub()
-                                           Do
-                                               Thread.Sleep(1000 / 30)
-                                               Me.Invalidate()
-                                           Loop Until abortThreads
-                                       End Sub)
-            renderer.IsBackground = True
-            renderer.Start()
-
             LoadSettings()
+
+            Task.Run(Sub()
+                         Do
+                             Thread.Sleep(1000 / 30)
+                             Me.Invalidate()
+                         Loop Until abortThreads
+                     End Sub)
         End If
 
         AddHandler Me.FormClosing, Sub()
@@ -161,8 +160,7 @@ Public Class FormMain
 
         StopAudioDevice()
 
-        audioSource = New WaveIn()
-        audioSource.DeviceNumber = ComboBoxAudioDevices.SelectedIndex
+        audioSource = New WaveIn With {.DeviceNumber = ComboBoxAudioDevices.SelectedIndex}
         Dim wc As WaveInCapabilities = WaveIn.GetCapabilities(audioSource.DeviceNumber)
         LabelAudioSource.MaximumSize = New Size(PanelOptions.Width - LabelAudioSource.Left - 4, LabelAudioSource.Height)
         LabelAudioSource.Text = wc.ProductName
@@ -196,18 +194,10 @@ Public Class FormMain
                         token += 1
                     End If
                 Case 2 ' Channels
-                    If f(i) = "M" Then
-                        channels = 1
-                    Else
-                        channels = 2
-                    End If
+                    channels = If(f(i) = "M", 1, 2)
                     token += 1
                 Case 3
-                    If f(i) = "0" Then
-                        bitDepth = 8
-                    Else
-                        bitDepth = 16
-                    End If
+                    bitDepth = If(f(i) = "0", 8, 16)
             End Select
         Next
         LabelAudioFormat.Text = $"{sampleRate / 1000:F3} KHz {If(channels = "1", "Mono", "Stereo")} {bitDepth} bits"
@@ -375,10 +365,10 @@ Public Class FormMain
                         bufR(bufferIndex) = BitConverter.ToInt16(tmpB, 0) * gain
                     Case 24
                         Array.Copy(e.Buffer, i, tmpB, 1, dataSize)
-                        bufL(bufferIndex) = BitConverter.ToInt32(tmpB, 0) * gain
+                        bufL(bufferIndex) = (BitConverter.ToInt32(tmpB, 0) >> 8) * gain
 
                         Array.Copy(e.Buffer, i + dataSize, tmpB, 1, dataSize)
-                        bufR(bufferIndex) = BitConverter.ToInt32(tmpB, 0) * gain
+                        bufR(bufferIndex) = (BitConverter.ToInt32(tmpB, 0) >> 8) * gain
                 End Select
 
                 ProcessBuffer(bufferIndex)

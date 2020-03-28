@@ -398,7 +398,7 @@ Partial Class FormMain
         Me.Label12.Location = New System.Drawing.Point(18, 556)
         Me.Label12.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
         Me.Label12.Name = "Label12"
-        Me.Label12.Size = New System.Drawing.Size(38, 15)
+        Me.Label12.Size = New System.Drawing.Size(39, 15)
         Me.Label12.TabIndex = 2
         Me.Label12.Text = "Y Axis"
         Me.Label12.UseMnemonic = False
@@ -409,7 +409,7 @@ Partial Class FormMain
         Me.Label11.Location = New System.Drawing.Point(18, 535)
         Me.Label11.Margin = New System.Windows.Forms.Padding(12, 3, 3, 3)
         Me.Label11.Name = "Label11"
-        Me.Label11.Size = New System.Drawing.Size(38, 15)
+        Me.Label11.Size = New System.Drawing.Size(39, 15)
         Me.Label11.TabIndex = 2
         Me.Label11.Text = "X Axis"
         Me.Label11.UseMnemonic = False
