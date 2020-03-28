@@ -45,7 +45,7 @@ Public Class FormMain
     Private dataSize As Integer
     Private bufferMilliseconds As Integer
     Private stp As Integer
-    Private maxNormValue As Integer
+    Private maxNormValue As ULong
     Private tmpB() As Byte
 
     Private xAxis As AxisAssignments
@@ -219,9 +219,10 @@ Public Class FormMain
         stp = channels * dataSize
         maxNormValue = 2 ^ bitDepth
 
-        bufferMilliseconds = 25 ' Math.Max(20, (sampleRate / 2) / 1000)
+        bufferMilliseconds = 25
 
-        ReDim tmpB(dataSize + (dataSize Mod 2) - 1)
+        'eDim tmpB(dataSize + (dataSize Mod 2) - 1)
+        ReDim tmpB(stp / 2 - 1)
 
         bufferLength = sampleRate * bufferMilliseconds / 1000
         ReDim bufL(bufferLength - 1)
@@ -360,15 +361,18 @@ Public Class FormMain
                     Case 16
                         Array.Copy(e.Buffer, i, tmpB, 0, dataSize)
                         bufL(bufferIndex) = BitConverter.ToInt16(tmpB, 0) * gain
-
                         Array.Copy(e.Buffer, i + dataSize, tmpB, 0, dataSize)
                         bufR(bufferIndex) = BitConverter.ToInt16(tmpB, 0) * gain
-                    Case 24
-                        Array.Copy(e.Buffer, i, tmpB, 1, dataSize)
-                        bufL(bufferIndex) = (BitConverter.ToInt32(tmpB, 0) >> 8) * gain
-
-                        Array.Copy(e.Buffer, i + dataSize, tmpB, 1, dataSize)
-                        bufR(bufferIndex) = (BitConverter.ToInt32(tmpB, 0) >> 8) * gain
+                    Case 24 ' FIXME: This does not work
+                        Array.Copy(e.Buffer, i, tmpB, 0, dataSize)
+                        bufL(bufferIndex) = (tmpB(0) Or (CInt(tmpB(1)) << 8) Or (CInt(tmpB(2)) << 16)) * gain
+                        Array.Copy(e.Buffer, i + dataSize, tmpB, 0, dataSize)
+                        bufR(bufferIndex) = (tmpB(0) Or (CInt(tmpB(1)) << 8) Or (CInt(tmpB(2)) << 16)) * gain
+                    Case 32 ' FIXME: This does not work
+                        Array.Copy(e.Buffer, i, tmpB, 0, dataSize)
+                        bufL(bufferIndex) = (BitConverter.ToUInt32(tmpB, 0)) * gain
+                        Array.Copy(e.Buffer, i + dataSize, tmpB, 0, dataSize)
+                        bufR(bufferIndex) = (BitConverter.ToUInt32(tmpB, 0)) * gain
                 End Select
 
                 ProcessBuffer(bufferIndex)
