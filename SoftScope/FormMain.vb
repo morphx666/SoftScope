@@ -78,15 +78,6 @@ Public Class FormMain
 
     Private mainWindowBounds As Rectangle
 
-    Private Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
-        abortThreads = True
-
-        StopAudioDevice()
-        SaveSettings()
-
-        Application.DoEvents()
-    End Sub
-
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles Me.Load
         Me.SetStyle(ControlStyles.AllPaintingInWmPaint, True)
         Me.SetStyle(ControlStyles.UserPaint, True)
@@ -97,21 +88,35 @@ Public Class FormMain
         SetupEventHandlers()
         SetupComboBoxes()
 
-        For i As Integer = 0 To fftHistSize - 1
-            ReDim fftLHist(i)(fftSize2 - 1)
-            ReDim fftRHist(i)(fftSize2 - 1)
-        Next
+        If ComboBoxAudioDevices.Items.Count = 0 Then
+            MsgBox("No Input audio devices found", MsgBoxStyle.Exclamation)
+            Application.Exit()
+        Else
+            For i As Integer = 0 To fftHistSize - 1
+                ReDim fftLHist(i)(fftSize2 - 1)
+                ReDim fftRHist(i)(fftSize2 - 1)
+            Next
 
-        Dim renderer As New Thread(Sub()
-                                       Do
-                                           Thread.Sleep(1000 / 30)
-                                           Me.Invalidate()
-                                       Loop Until abortThreads
-                                   End Sub)
-        renderer.IsBackground = True
-        renderer.Start()
+            Dim renderer As New Thread(Sub()
+                                           Do
+                                               Thread.Sleep(1000 / 30)
+                                               Me.Invalidate()
+                                           Loop Until abortThreads
+                                       End Sub)
+            renderer.IsBackground = True
+            renderer.Start()
 
-        LoadSettings()
+            LoadSettings()
+        End If
+
+        AddHandler Me.FormClosing, Sub()
+                                       abortThreads = True
+
+                                       StopAudioDevice()
+                                       SaveSettings()
+
+                                       Application.DoEvents()
+                                   End Sub
 
         'PlayFromFile("youscope.wav")
         'PlayFromFile("kickstarter192khz.wav")
@@ -445,6 +450,8 @@ Public Class FormMain
             pixelsCopy = pixels.ToList()
         End SyncLock
 
+        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+
         If drawGrid Then RenderGrid(g)
 
         ' FIXME: There should be a better solution to draw the ray when it's not moving
@@ -452,13 +459,12 @@ Public Class FormMain
             Using b As New SolidBrush(rayColor)
                 g.FillEllipse(b, New Rectangle(pixels(0), New Size(2, 2)))
             End Using
+        Else
+            For i = 0 To pixelsCopy.Count - 2
+                RenderLine(g, pixelsCopy(i), pixelsCopy(i + 1))
+            Next
         End If
 
-        For i = 0 To pixelsCopy.Count - 2
-            RenderLine(g, pixelsCopy(i), pixelsCopy(i + 1))
-        Next
-
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
         Using colorLeft As New Pen(leftChannelColor, 1)
             Using colorRight As New Pen(rightChannelColor, 1)
                 If renderAudioWaveForm Then RenderWaveForm(g, colorLeft, colorRight)
@@ -503,7 +509,6 @@ Public Class FormMain
         p1.Alpha -= (1.0 - rayBrightness) * 150 * Distance(p1, p2) / screenDiagonal * 255
         'p2.Alpha = p1.Alpha
 
-        g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
         Using p As New Pen(Color.FromArgb(p1.Alpha / 1.5, rayGlowColor), glowWidth)
             g.DrawLine(p, p1, p2)
         End Using
